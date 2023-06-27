@@ -1,7 +1,29 @@
-FROM python:3.11-alpine
+FROM debian:stable-slim
 
 WORKDIR /app
 
-COPY entrypoint.sh .
+# Install prerequisites
+RUN apt-get update -y; \
+    apt upgrade -y; \
+    apt install -y \
+        cron \
+        gcc \
+        libpq-dev \
+        make \
+        postgresql-client \
+        ruby \
+        ruby-dev;
 
-CMD ["./entrypoint.sh"]
+# Install ruby requirements
+RUN gem install mustache pg-ldap-sync;
+
+# Copy required files
+COPY templates templates
+COPY scripts scripts
+COPY run.sh .
+
+# Add a cron job to run the main program every minute, redirecting output
+RUN crontab -l | { echo "*/1 * * * * /app/run.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -;
+
+# Run cron in the foreground
+CMD ["cron", "-f"]
