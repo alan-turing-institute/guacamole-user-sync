@@ -1,6 +1,8 @@
 FROM debian:stable-slim
 
+# Set up work directory
 WORKDIR /app
+RUN mkdir -p /app/output
 
 # Install prerequisites
 RUN apt-get update -y; \
