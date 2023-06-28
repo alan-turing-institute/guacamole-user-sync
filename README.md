@@ -15,4 +15,3 @@ Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
 - POSTGRES_PASSWORD: Password of PostgreSQL user
 - POSTGRES_PORT: PostgreSQL server port (default: '5432')
 - POSTGRES_USERNAME: Username of PostgreSQL user
-- SYSTEM_ADMINISTRATOR_GROUP_NAME: Name of the Active Directory group containing system administrators (default: 'System Administrators')
