@@ -1,32 +1,22 @@
 /* Ensure that the 'ldap_users' group exists */
-DO
-$$
-BEGIN
-    IF EXISTS (
+DO $$ BEGIN
+    IF NOT EXISTS (
         SELECT FROM pg_catalog.pg_roles
         WHERE rolname = 'ldap_users'
     ) THEN
-        RAISE NOTICE 'Role "ldap_users" already exists. Skipping.';
-    ELSE
         CREATE ROLE ldap_users;
     END IF;
-END
-$$;
+END $$;
 
 /* Ensure that the 'ldap_groups' group exists */
-DO
-$$
-BEGIN
-    IF EXISTS (
+DO $$ BEGIN
+    IF NOT EXISTS (
         SELECT FROM pg_catalog.pg_roles
         WHERE rolname = 'ldap_groups'
     ) THEN
-        RAISE NOTICE 'Role "ldap_groups" already exists. Skipping.';
-    ELSE
         CREATE ROLE ldap_groups;
     END IF;
-END
-$$;
+END $$;
 
 /* Ensure that all LDAP users are Guacamole entities */
 INSERT INTO guacamole_entity (name, type)
