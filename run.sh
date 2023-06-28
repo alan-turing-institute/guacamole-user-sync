@@ -3,8 +3,11 @@
 # Expand mustache template
 echo "$(date -I"seconds") Expanding mustache templates..."
 /app/scripts/expand_pg_ldap_sync.rb > /app/output/pg-ldap-sync.yaml
+chmod 0600 /app/output/pg-ldap-sync.yaml
 /app/scripts/expand_psql.rb > /app/output/psql.sh
+chmod 0700 /app/output/psql.sh
 /app/scripts/expand_update_users.rb > /app/output/update_users.sql
+chmod 0600 /app/output/update_users.sql
 
 # Run LDAP synchronisation
 echo "$(date -I"seconds") Running LDAP synchronisation..."

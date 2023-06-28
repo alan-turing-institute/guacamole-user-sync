@@ -1,3 +1,33 @@
+/* Ensure that the 'ldap_users' group exists */
+DO
+$$
+BEGIN
+    IF EXISTS (
+        SELECT FROM pg_catalog.pg_roles
+        WHERE rolname = 'ldap_users'
+    ) THEN
+        RAISE NOTICE 'Role "ldap_users" already exists. Skipping.';
+    ELSE
+        CREATE ROLE ldap_users;
+    END IF;
+END
+$$;
+
+/* Ensure that the 'ldap_groups' group exists */
+DO
+$$
+BEGIN
+    IF EXISTS (
+        SELECT FROM pg_catalog.pg_roles
+        WHERE rolname = 'ldap_groups'
+    ) THEN
+        RAISE NOTICE 'Role "ldap_groups" already exists. Skipping.';
+    ELSE
+        CREATE ROLE ldap_groups;
+    END IF;
+END
+$$;
+
 /* Ensure that all LDAP users are Guacamole entities */
 INSERT INTO guacamole_entity (name, type)
 SELECT usename, 'USER'
@@ -31,7 +61,6 @@ INSERT INTO guacamole_entity (name, type)
 SELECT groname, 'USER_GROUP'
 FROM
     pg_group
-    WHERE (groname LIKE 'SG %')
 ON CONFLICT DO NOTHING;
 
 /* Ensure that all user groups are Guacamole user groups */
@@ -51,41 +80,4 @@ FROM
     JOIN guacamole_entity guac_group ON pg_group.groname = guac_group.name
     JOIN guacamole_entity guac_user ON pg_user.usename = guac_user.name
     JOIN guacamole_user_group ON guacamole_user_group.entity_id = guac_group.entity_id
-    WHERE (groname LIKE 'SG %')
 ON CONFLICT DO NOTHING;
-
-/* Grant administration permissions to members of the System Administrators group */
-INSERT INTO guacamole_system_permission (entity_id, permission)
-SELECT entity_id, permission :: guacamole_system_permission_type
-FROM
-    (
-        VALUES
-            ('{{ADMINISTRATORS_GROUP_NAME}}', 'CREATE_CONNECTION'),
-            ('{{ADMINISTRATORS_GROUP_NAME}}', 'CREATE_CONNECTION_GROUP'),
-            ('{{ADMINISTRATORS_GROUP_NAME}}', 'CREATE_SHARING_PROFILE'),
-            ('{{ADMINISTRATORS_GROUP_NAME}}', 'CREATE_USER'),
-            ('{{ADMINISTRATORS_GROUP_NAME}}', 'CREATE_USER_GROUP'),
-            ('{{ADMINISTRATORS_GROUP_NAME}}', 'ADMINISTER')
-    ) group_permissions (username, permission)
-    JOIN guacamole_entity ON group_permissions.username = guacamole_entity.name AND guacamole_entity.type = 'USER_GROUP'
-ON CONFLICT DO NOTHING;
-
-/* Assign connection permissions to each group */
-DELETE FROM guacamole_connection_permission;
-INSERT INTO guacamole_connection_permission (entity_id, connection_id, permission)
-    SELECT entity_id, connection_id, permission::guacamole_object_permission_type
-    FROM
-        (
-            VALUES
-                ('{{ADMINISTRATORS_GROUP_NAME}}', 'READ'),
-                ('{{ADMINISTRATORS_GROUP_NAME}}', 'UPDATE'),
-                ('{{ADMINISTRATORS_GROUP_NAME}}', 'DELETE'),
-                ('{{ADMINISTRATORS_GROUP_NAME}}', 'ADMINISTER'),
-                ('{{USERS_GROUP_NAME}}', 'READ')
-        ) group_permissions (username, permission)
-        CROSS JOIN guacamole_connection
-        JOIN guacamole_entity ON group_permissions.username = guacamole_entity.name
-ON CONFLICT DO NOTHING;
-
-/* Remove the default guacadmin user */
-DELETE FROM guacamole_entity WHERE guacamole_entity.name = 'guacadmin';
