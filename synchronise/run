@@ -1,5 +1,12 @@
 #! /bin/bash
 
+# Expand psql.sh mustache template
+if [ ! -e "/app/scripts/psql.sh" ]; then
+    echo "$(date -Is) Expanding mustache template for 'psql.sh'..."
+    /app/scripts/expand_init_db.rb > /app/resources/init_db.sql
+fi
+chmod 0600 /app/resources/init_db.sql
+
 # Expand pg-ldap-sync.yaml mustache template
 if [ ! -e "/app/resources/pg-ldap-sync.yaml" ]; then
     echo "$(date -Is) Expanding mustache template for 'pg-ldap-sync.yaml'..."
