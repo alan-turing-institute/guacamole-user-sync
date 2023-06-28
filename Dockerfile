@@ -2,7 +2,6 @@ FROM debian:stable-slim
 
 # Set up work directory
 WORKDIR /app
-RUN mkdir -p /app/output
 
 # Install prerequisites
 RUN apt-get update -y; \
@@ -20,8 +19,9 @@ RUN apt-get update -y; \
 RUN gem install mustache pg-ldap-sync;
 
 # Copy required files
-COPY templates templates
+COPY resources resources
 COPY scripts scripts
+COPY templates templates
 COPY run.sh .
 
 # Add a cron job to run the main program every minute, redirecting output

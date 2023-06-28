@@ -61,6 +61,7 @@ INSERT INTO guacamole_entity (name, type)
 SELECT groname, 'USER_GROUP'
 FROM
     pg_group
+    WHERE groname NOT LIKE '%pg_%' and groname NOT LIKE 'ldap_%'
 ON CONFLICT DO NOTHING;
 
 /* Ensure that all user groups are Guacamole user groups */

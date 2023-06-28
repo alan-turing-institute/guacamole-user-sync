@@ -3,7 +3,6 @@ Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
 
 ## Environment variables
 
-- ADMINISTRATORS_GROUP_NAME: Active Directory group containing administrators
 - LDAP_BIND_DN: Distinguished name of LDAP bind user
 - LDAP_BIND_PASSWORD: Password of LDAP bind user
 - LDAP_GROUP_BASE_DN: Base DN for groups
@@ -16,4 +15,3 @@ Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
 - POSTGRES_PASSWORD: Password of PostgreSQL user
 - POSTGRES_PORT: PostgreSQL server port (default: '5432')
 - POSTGRES_USERNAME: Username of PostgreSQL user
-- USERS_GROUP_NAME: Active Directory group containing users
