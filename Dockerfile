@@ -13,7 +13,8 @@ RUN apt-get update -y; \
         make \
         postgresql-client \
         ruby \
-        ruby-dev;
+        ruby-dev \
+        s6;
 
 # Install ruby requirements
 RUN gem install mustache pg-ldap-sync;
@@ -22,10 +23,11 @@ RUN gem install mustache pg-ldap-sync;
 COPY resources resources
 COPY scripts scripts
 COPY templates templates
-COPY run.sh .
+COPY synchronise /etc/s6/synchronise
 
-# Add a cron job to run the main program every minute, redirecting output
-RUN crontab -l | { echo "*/1 * * * * /app/run.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -;
+# Set file permissions
+RUN chmod 0700 /etc/s6/synchronise/* /app/scripts/*
+RUN chmod 0600 /app/resources/* /app/templates/*
 
-# Run cron in the foreground
-CMD ["cron", "-f"]
+# Schedule jobs with s6
+CMD ["/bin/s6-svscan", "/etc/s6"]

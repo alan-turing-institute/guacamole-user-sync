@@ -71,8 +71,8 @@ FROM
     guacamole_entity WHERE type = 'USER_GROUP'
 ON CONFLICT DO NOTHING;
 
-/* Ensure that all users are added to the correct group */
-DELETE FROM guacamole_user_group_member;
+/* Assign all users to the correct groups */
+-- DELETE FROM guacamole_user_group_member;
 INSERT INTO guacamole_user_group_member (user_group_id, member_entity_id)
 SELECT guacamole_user_group.user_group_id, guac_user.entity_id
 FROM

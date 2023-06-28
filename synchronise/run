@@ -1,0 +1,27 @@
+#! /bin/bash
+
+# Expand pg-ldap-sync.yaml mustache template
+if [ ! -e "/app/resources/pg-ldap-sync.yaml" ]; then
+    echo "$(date -Is) Expanding mustache template for 'pg-ldap-sync.yaml'..."
+    /app/scripts/expand_pg_ldap_sync.rb > /app/resources/pg-ldap-sync.yaml
+fi
+chmod 0600 /app/resources/pg-ldap-sync.yaml
+
+# Expand psql.sh mustache template
+if [ ! -e "/app/scripts/psql.sh" ]; then
+    echo "$(date -Is) Expanding mustache template for 'psql.sh'..."
+    /app/scripts/expand_psql.rb > /app/scripts/psql.sh
+fi
+chmod 0700 /app/scripts/psql.sh
+
+# Run LDAP synchronisation
+echo "$(date -Is) Running LDAP synchronisation..."
+/usr/local/bin/pg_ldap_sync -vvv -c /app/resources/pg-ldap-sync.yaml 2>&1
+
+# Update the local database
+echo "$(date -Is) Updating database..."
+/app/scripts/psql.sh
+
+# Finish synchronisation
+echo "$(date -Is) Finished database synchronisation"
+sleep 300
