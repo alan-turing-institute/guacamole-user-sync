@@ -15,3 +15,4 @@ Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
 - POSTGRES_PASSWORD: Password of PostgreSQL user
 - POSTGRES_PORT: PostgreSQL server port (default: '5432')
 - POSTGRES_USERNAME: Username of PostgreSQL user
+- REPEAT_INTERVAL: How often (in seconds) to wait before attempting to synchronise again (default: '300')

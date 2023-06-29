@@ -24,4 +24,8 @@ echo "$(date -Is) Updating database..."
 
 # Finish synchronisation
 echo "$(date -Is) Finished database synchronisation"
-sleep 300
+
+# Wait before repeating
+[[ $((REPEAT_INTERVAL)) -gt 0 ]] && SLEEP_TIME=$((REPEAT_INTERVAL)) || SLEEP_TIME=300
+echo "Waiting $SLEEP_TIME seconds before re-attempting synchronisation"
+sleep "$SLEEP_TIME"
