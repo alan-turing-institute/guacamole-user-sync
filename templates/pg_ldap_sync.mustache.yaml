@@ -41,10 +41,10 @@ ldap_groups:
 # Connection parameters to PostgreSQL server
 # see also: http://rubydoc.info/gems/pg/PG/Connection#initialize-instance_method
 pg_connection:
-  host: {{POSTGRES_HOST}}
-  dbname: {{POSTGRES_DB_NAME}}
-  user: {{POSTGRES_USERNAME}}
-  password: {{POSTGRES_PASSWORD}}
+  host: {{POSTGRESQL_HOST}}
+  dbname: {{POSTGRESQL_DB_NAME}}
+  user: {{POSTGRESQL_USERNAME}}
+  password: {{POSTGRESQL_PASSWORD}}
 
 pg_users:
   # Filter for identifying LDAP generated users in the database.
