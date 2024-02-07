@@ -10,9 +10,9 @@ Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
 - LDAP_HOST: LDAP host
 - LDAP_USER_BASE_DN: Base DN for users
 - LDAP_USER_FILTER: LDAP filter to select users
-- POSTGRES_DB_NAME: Database name for PostgreSQL server (default: 'guacamole')
-- POSTGRES_HOST: PostgreSQL server host
-- POSTGRES_PASSWORD: Password of PostgreSQL user
-- POSTGRES_PORT: PostgreSQL server port (default: '5432')
-- POSTGRES_USERNAME: Username of PostgreSQL user
+- POSTGRESQL_DB_NAME: Database name for PostgreSQL server (default: 'guacamole')
+- POSTGRESQL_HOST: PostgreSQL server host
+- POSTGRESQL_PASSWORD: Password of PostgreSQL user
+- POSTGRESQL_PORT: PostgreSQL server port (default: '5432')
+- POSTGRESQL_USERNAME: Username of PostgreSQL user
 - REPEAT_INTERVAL: How often (in seconds) to wait before attempting to synchronise again (default: '300')
