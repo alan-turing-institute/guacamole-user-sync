@@ -22,8 +22,8 @@ ldap_users:
   base: {{{LDAP_USER_BASE_DN}}}
   # LDAP filter defining which LDAP users should be synchronized
   filter: {{{LDAP_USER_FILTER}}}
-  # this attribute is used as PG role name. It is 'sAMAccountName@domain'
-  name_attribute: userPrincipalName
+  # this attribute is used as PG role name
+  name_attribute: {{{LDAP_USER_NAME_ATTR}}}
   # lowercase name for use as PG role name
   lowercase_name: false
 
@@ -33,10 +33,10 @@ ldap_groups:
   # LDAP filter defining which LDAP groups should be synchronized
   filter: {{{LDAP_GROUP_FILTER}}}
   # this attribute is used as PG role name
-  name_attribute: cn
+  name_attribute: {{{LDAP_GROUP_NAME_ATTR}}}
   # lowercase name for use as PG role name
   lowercase_name: false
-  # this attribute must reference to all member DN's of the given group
+  # this attribute must reference all member DNs of the given group
   member_attribute: member
 
 # Connection parameters to PostgreSQL server
@@ -46,6 +46,7 @@ pg_connection:
   dbname: {{{POSTGRESQL_DB_NAME}}}
   user: {{{POSTGRESQL_USERNAME}}}
   password: {{{POSTGRESQL_PASSWORD}}}
+  port: {{{POSTGRESQL_PORT}}}
 
 pg_users:
   # Filter for identifying LDAP generated users in the database.

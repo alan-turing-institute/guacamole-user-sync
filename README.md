@@ -7,10 +7,12 @@ Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microso
 - LDAP_BIND_PASSWORD: (Optional) password of LDAP bind user
 - LDAP_GROUP_BASE_DN: Base DN for groups
 - LDAP_GROUP_FILTER: LDAP filter to select groups
+- LDAP_GROUP_NAME_ATTR: Attribute used to extract group names (default: 'cn')
 - LDAP_HOST: LDAP host
-- LDAP_PORT: LDAP port
+- LDAP_PORT: LDAP port (default: '389')
 - LDAP_USER_BASE_DN: Base DN for users
 - LDAP_USER_FILTER: LDAP filter to select users
+- LDAP_USER_NAME_ATTR: Attribute used to extract user names (default: 'userPrincipalName')
 - POSTGRESQL_DB_NAME: Database name for PostgreSQL server (default: 'guacamole')
 - POSTGRESQL_HOST: PostgreSQL server host
 - POSTGRESQL_PASSWORD: Password of PostgreSQL user
