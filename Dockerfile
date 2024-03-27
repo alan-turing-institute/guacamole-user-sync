@@ -7,6 +7,8 @@ WORKDIR /app
 RUN apt-get update -y; \
     apt upgrade -y; \
     apt install -y \
+        vim \
+        ldap-utils \
         cron \
         gcc \
         libpq-dev \
