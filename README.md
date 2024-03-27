@@ -3,8 +3,8 @@ Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microso
 
 ## Environment variables
 
-- LDAP_BIND_DN: Distinguished name of LDAP bind user
-- LDAP_BIND_PASSWORD: Password of LDAP bind user
+- LDAP_BIND_DN: (Optional) distinguished name of LDAP bind user
+- LDAP_BIND_PASSWORD: (Optional) password of LDAP bind user
 - LDAP_GROUP_BASE_DN: Base DN for groups
 - LDAP_GROUP_FILTER: LDAP filter to select groups
 - LDAP_HOST: LDAP host
