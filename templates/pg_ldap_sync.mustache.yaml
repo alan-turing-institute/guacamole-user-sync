@@ -4,13 +4,9 @@
 
 # Connection parameters to LDAP server
 # see also: http://net-ldap.rubyforge.org/Net/LDAP.html#method-c-new
-# Ideally we would use SSL (as below) but this is not currently working
-# port: 636
-# encryption:
-#   method: :simple_tls
 ldap_connection:
   host: {{{LDAP_HOST}}}
-  port: 389
+  port: {{{LDAP_PORT}}}
   auth:
     method: :simple
     username: {{{LDAP_BIND_DN}}}

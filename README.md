@@ -1,5 +1,5 @@
 # guacamole-user-sync
-Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
+Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microsoft Active Directory
 
 ## Environment variables
 
@@ -8,6 +8,7 @@ Synchronise a Guacamole PostgreSQL database with a Microsoft Active Directory
 - LDAP_GROUP_BASE_DN: Base DN for groups
 - LDAP_GROUP_FILTER: LDAP filter to select groups
 - LDAP_HOST: LDAP host
+- LDAP_PORT: LDAP port
 - LDAP_USER_BASE_DN: Base DN for users
 - LDAP_USER_FILTER: LDAP filter to select users
 - POSTGRESQL_DB_NAME: Database name for PostgreSQL server (default: 'guacamole')
