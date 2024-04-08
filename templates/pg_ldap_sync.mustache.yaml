@@ -8,9 +8,14 @@ ldap_connection:
   host: {{{LDAP_HOST}}}
   port: {{{LDAP_PORT}}}
   auth:
+  {{#LDAP_BIND_DN}}
     method: :simple
     username: {{{LDAP_BIND_DN}}}
     password: {{{LDAP_BIND_PASSWORD}}}
+  {{/LDAP_BIND_DN}}
+  {{^LDAP_BIND_DN}}
+    method: :anonymous
+  {{/LDAP_BIND_DN}}
 
 # Search parameters for LDAP users which should be synchronized
 ldap_users:
