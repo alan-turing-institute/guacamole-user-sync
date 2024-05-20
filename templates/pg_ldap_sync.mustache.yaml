@@ -5,13 +5,13 @@
 # Connection parameters to LDAP server
 # see also: http://net-ldap.rubyforge.org/Net/LDAP.html#method-c-new
 ldap_connection:
-  host: {{{LDAP_HOST}}}
-  port: {{{LDAP_PORT}}}
+  host: "{{{LDAP_HOST}}}"
+  port: "{{{LDAP_PORT}}}"
   auth:
   {{#LDAP_BIND_DN}}
     method: :simple
-    username: {{{LDAP_BIND_DN}}}
-    password: {{{LDAP_BIND_PASSWORD}}}
+    username: "{{{LDAP_BIND_DN}}}"
+    password: "{{{LDAP_BIND_PASSWORD}}}"
   {{/LDAP_BIND_DN}}
   {{^LDAP_BIND_DN}}
     method: :anonymous
@@ -19,46 +19,46 @@ ldap_connection:
 
 # Search parameters for LDAP users which should be synchronized
 ldap_users:
-  base: {{{LDAP_USER_BASE_DN}}}
+  base: "{{{LDAP_USER_BASE_DN}}}"
   # LDAP filter defining which LDAP users should be synchronized
-  filter: {{{LDAP_USER_FILTER}}}
+  filter: "{{{LDAP_USER_FILTER}}}"
   # this attribute is used as PG role name
-  name_attribute: {{{LDAP_USER_NAME_ATTR}}}
+  name_attribute: "{{{LDAP_USER_NAME_ATTR}}}"
   # lowercase name for use as PG role name
   lowercase_name: false
 
 # Search parameters for LDAP groups which should be synchronized
 ldap_groups:
-  base: {{{LDAP_GROUP_BASE_DN}}}
+  base: "{{{LDAP_GROUP_BASE_DN}}}"
   # LDAP filter defining which LDAP groups should be synchronized
-  filter: {{{LDAP_GROUP_FILTER}}}
+  filter: "{{{LDAP_GROUP_FILTER}}}"
   # this attribute is used as PG role name
-  name_attribute: {{{LDAP_GROUP_NAME_ATTR}}}
+  name_attribute: "{{{LDAP_GROUP_NAME_ATTR}}}"
   # lowercase name for use as PG role name
   lowercase_name: false
   # this attribute must reference all member DNs of the given group
-  member_attribute: member
+  member_attribute: "member"
 
 # Connection parameters to PostgreSQL server
 # see also: http://rubydoc.info/gems/pg/PG/Connection#initialize-instance_method
 pg_connection:
-  host: {{{POSTGRESQL_HOST}}}
-  dbname: {{{POSTGRESQL_DB_NAME}}}
-  user: {{{POSTGRESQL_USERNAME}}}
-  password: {{{POSTGRESQL_PASSWORD}}}
-  port: {{{POSTGRESQL_PORT}}}
+  host: "{{{POSTGRESQL_HOST}}}"
+  dbname: "{{{POSTGRESQL_DB_NAME}}}"
+  user: "{{{POSTGRESQL_USERNAME}}}"
+  password: "{{{POSTGRESQL_PASSWORD}}}"
+  port: "{{{POSTGRESQL_PORT}}}"
 
 pg_users:
   # Filter for identifying LDAP generated users in the database.
   # This is the WHERE-condition to "SELECT rolname, oid FROM pg_roles"
-  filter: oid IN (SELECT pam.member FROM pg_auth_members pam JOIN pg_roles pr ON pr.oid=pam.roleid WHERE pr.rolname='ldap_users')
+  filter: "oid IN (SELECT pam.member FROM pg_auth_members pam JOIN pg_roles pr ON pr.oid=pam.roleid WHERE pr.rolname='ldap_users')"
   # Options for CREATE RULE statements
-  create_options: LOGIN IN ROLE ldap_users
+  create_options: "LOGIN IN ROLE ldap_users"
 
 pg_groups:
   # Filter for identifying LDAP generated groups in the database.
   # This is the WHERE-condition to "SELECT rolname, oid FROM pg_roles"
-  filter: oid IN (SELECT pam.member FROM pg_auth_members pam JOIN pg_roles pr ON pr.oid=pam.roleid WHERE pr.rolname='ldap_groups')
+  filter: "oid IN (SELECT pam.member FROM pg_auth_members pam JOIN pg_roles pr ON pr.oid=pam.roleid WHERE pr.rolname='ldap_groups')"
   # Options for CREATE RULE statements
-  create_options: NOLOGIN IN ROLE ldap_groups
+  create_options: "NOLOGIN IN ROLE ldap_groups"
   grant_options:
