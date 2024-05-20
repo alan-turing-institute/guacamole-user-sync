@@ -1,0 +1,25 @@
+---
+name: Test code
+
+# Run workflow on PRs and pushes to matching branches
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test_bash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install bats
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4
+      - name: Install ruby dependencies
+        run: gem install mustache
+      - name: Run tests
+        run: bats tests
