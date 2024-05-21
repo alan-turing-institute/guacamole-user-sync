@@ -19,3 +19,16 @@ Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microso
 - POSTGRESQL_PORT: PostgreSQL server port (default: '5432')
 - POSTGRESQL_USERNAME: Username of PostgreSQL user
 - REPEAT_INTERVAL: How often (in seconds) to wait before attempting to synchronise again (default: '300')
+
+## Tests
+
+To run the tests you will need to install
+
+- `bats-core`
+- `yq`
+
+The tests can be run with:
+
+```console
+$ bats tests
+```
