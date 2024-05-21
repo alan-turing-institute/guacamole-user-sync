@@ -1,0 +1,30 @@
+---
+name: Test code
+
+# Run workflow on PRs and pushes to matching branches
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test_bash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install bats
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4
+      - name: Install ruby dependencies
+        run: gem install mustache
+      - name: Install yq
+        run: |
+          VERSION=v4.44.1
+          BINARY=yq_linux_amd64
+          wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY}.tar.gz -O - | tar xz && sudo mv ${BINARY} /usr/bin/yq
+      - name: Run tests
+        run: bats tests
