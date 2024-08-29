@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "guacamole-user-sync"
+dynamic = ["version"]
+description = "Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microsoft Active Directory"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "James Robinson", email = "james.em.robinson@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/alan-turing-institute/guacamole-user-sync#readme"
+Issues = "https://github.com/alan-turing-institute/guacamole-user-sync/issues"
+Source = "https://github.com/alan-turing-institute/guacamole-user-sync"
+
+[tool.hatch.version]
+path = "guacamole_user_sync/__about__.py"
+
+[tool.hatch.envs.test]
+dependencies = [
+  "coverage==7.6.1",
+  "pytest==8.3.2",
+]
+
+[tool.hatch.envs.test.scripts]
+test = "coverage run -m pytest {args: tests}"

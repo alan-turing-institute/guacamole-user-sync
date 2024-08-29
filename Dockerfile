@@ -1,33 +1,44 @@
-FROM debian:stable-slim
+# Build working image
+FROM python:3.12.5-slim AS builder
 
-# Set up work directory
+## Set up work directory
 WORKDIR /app
 
-# Install prerequisites
-RUN apt-get update -y; \
-    apt upgrade -y; \
-    apt install -y \
-        cron \
-        gcc \
-        libpq-dev \
-        make \
-        postgresql-client \
-        ruby \
-        ruby-dev \
-        s6;
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Install ruby requirements
-RUN gem install mustache pg-ldap-sync;
+## Install prerequisites
+RUN apt-get update && \
+    apt-get install -y dumb-init pipx && \
+    pipx install hatch
 
-# Copy required files
-COPY resources resources
-COPY scripts scripts
-COPY templates templates
-COPY synchronise /etc/s6/synchronise
+## Use hatch to determine dependencies
+COPY README.md pyproject.toml ./
+COPY guacamole_user_sync guacamole_user_sync
+RUN /root/.local/bin/hatch run pip freeze > requirements.txt
 
-# Set file permissions
-RUN chmod 0700 /etc/s6/synchronise/* /app/scripts/*
-RUN chmod 0600 /app/resources/* /app/templates/*
+## Build wheels for dependencies
+RUN python -m pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
-# Schedule jobs with s6
-CMD ["/bin/s6-svscan", "/etc/s6"]
+# Build final image
+FROM python:3.12.5-slim
+
+## Set up work directory
+WORKDIR /app
+
+## Copy required files
+COPY --from=builder /app/wheels /tmp/wheels
+COPY --from=builder /app/requirements.txt .
+COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
+COPY guacamole_user_sync guacamole_user_sync
+COPY synchronise.py .
+
+## Install Python packages
+RUN python -m pip install --no-cache /tmp/wheels/* && rm -rf /tmp/wheels
+
+## Set file permissions
+RUN chmod 0700 /app/synchronise.py
+
+## Run jobs with dumb-init
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["python", "/app/synchronise.py"]
