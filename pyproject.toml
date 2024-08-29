@@ -20,7 +20,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = [
+  "python-ldap==3.4.4",
+]
 
 [project.urls]
 Documentation = "https://github.com/alan-turing-institute/guacamole-user-sync#readme"
