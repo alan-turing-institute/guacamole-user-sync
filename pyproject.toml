@@ -7,7 +7,7 @@ name = "guacamole-user-sync"
 dynamic = ["version"]
 description = "Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microsoft Active Directory"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.11.*"
 license = "MIT"
 keywords = []
 authors = [
