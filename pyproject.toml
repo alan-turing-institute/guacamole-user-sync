@@ -78,3 +78,11 @@ module = [
     "ldap.*",
 ]
 ignore_missing_imports = true
+
+[tool.ruff.lint]
+select = [
+  # See https://beta.ruff.rs/docs/rules/
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "W",   # pycodestyle warnings
+]

@@ -4,7 +4,7 @@ from ldap.ldapobject import LDAPObject
 from ldap.asyncsearch import List as AsyncSearchList
 import ldap
 
-from guacamole_user_sync.models import LDAPQuery, LDAPUser
+from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPUser
 
 logger = logging.getLogger("guacamole_user_sync")
 
@@ -23,6 +23,31 @@ class LDAPClient:
             self._host = ldap.initialize(f"ldap://{self.hostname}")
         return self._host
 
+    def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
+        output = []
+        for result in self.search(query):
+            logger.info(result)
+            attr_dict = result[1][1]
+            output.append(
+                LDAPGroup(
+                    dn=result[1][0],
+                    cn=attr_dict["cn"][0].decode("utf-8"),
+                    description=attr_dict["description"][0].decode("utf-8"),
+                    gid_number=int(attr_dict["gidNumber"][0].decode("utf-8")),
+                    member=[group.decode("utf-8") for group in attr_dict["member"]],
+                    member_of=[
+                        group.decode("utf-8") for group in attr_dict["memberOf"]
+                    ],
+                    member_uid=[
+                        group.decode("utf-8") for group in attr_dict["memberUid"]
+                    ],
+                    object_class=[
+                        objc.decode("utf-8") for objc in attr_dict["objectClass"]
+                    ],
+                )
+            )
+        return output
+
     def search_users(self, query: LDAPQuery) -> list[LDAPUser]:
         output = []
         for result in self.search(query):
@@ -32,17 +57,19 @@ class LDAPClient:
                     dn=result[1][0],
                     cn=attr_dict["cn"][0].decode("utf-8"),
                     description=attr_dict["description"][0].decode("utf-8"),
-                    displayName=attr_dict["displayName"][0].decode("utf-8"),
-                    gidNumber=int(attr_dict["gidNumber"][0].decode("utf-8")),
-                    givenName=attr_dict["givenName"][0].decode("utf-8"),
-                    homeDirectory=attr_dict["homeDirectory"][0].decode("utf-8"),
-                    memberOf=[group.decode("utf-8") for group in attr_dict["memberOf"]],
-                    objectClass=[
+                    display_name=attr_dict["displayName"][0].decode("utf-8"),
+                    gid_number=int(attr_dict["gidNumber"][0].decode("utf-8")),
+                    given_name=attr_dict["givenName"][0].decode("utf-8"),
+                    home_directory=attr_dict["homeDirectory"][0].decode("utf-8"),
+                    member_of=[
+                        group.decode("utf-8") for group in attr_dict["memberOf"]
+                    ],
+                    object_class=[
                         objc.decode("utf-8") for objc in attr_dict["objectClass"]
                     ],
                     sn=attr_dict["sn"][0].decode("utf-8"),
                     uid=attr_dict["uid"][0].decode("utf-8"),
-                    uidNumber=int(attr_dict["uidNumber"][0].decode("utf-8")),
+                    uid_number=int(attr_dict["uidNumber"][0].decode("utf-8")),
                 )
             )
         return output
