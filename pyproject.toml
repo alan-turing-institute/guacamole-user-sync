@@ -69,3 +69,12 @@ features = ["test"]
 [tool.hatch.envs.test.scripts]
 all = ["python"]
 python = "coverage run -m pytest {args: tests}"
+
+[tool.mypy]
+strict = true                     # enable all optional error checking flags
+
+[[tool.mypy.overrides]]
+module = [
+    "ldap.*",
+]
+ignore_missing_imports = true
