@@ -21,7 +21,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
+  "psycopg==3.2.1",
   "python-ldap==3.4.4",
+  "SQLAlchemy==2.0.32",
 ]
 
 [project.urls]
