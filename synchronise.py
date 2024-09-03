@@ -3,7 +3,7 @@ import logging
 import os
 import time
 
-from guacamole_user_sync import LDAPClient, LDAPQuery
+from guacamole_user_sync import LDAPClient, LDAPQuery, PostgresqlClient, SchemaVersion
 
 logger = logging.getLogger("guacamole_user_sync")
 logging.basicConfig(
@@ -22,6 +22,11 @@ def main(
     ldap_user_base_dn: str,
     ldap_user_filter: str,
     ldap_user_name_attr: str,
+    postgresql_database_name: str,
+    postgresql_host_name: str,
+    postgresql_password: str,
+    postgresql_port: int,
+    postgresql_user_name: str,
     repeat_interval: int,
 ) -> None:
     # Initialise LDAP resources
@@ -45,6 +50,15 @@ def main(
             ldap_group_query=ldap_group_query,
             ldap_user_query=ldap_user_query,
         )
+
+        postgresql_client = PostgresqlClient(
+            database_name=postgresql_database_name,
+            host_name=postgresql_host_name,
+            port=postgresql_port,
+            user_name=postgresql_user_name,
+            user_password=postgresql_password,
+        )
+        postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
 
         # Wait before repeating
         logger.info(f"Waiting {repeat_interval} seconds.")
@@ -76,6 +90,13 @@ if __name__ == "__main__":
     if not (ldap_user_filter := os.getenv("LDAP_USER_FILTER", None)):
         raise ValueError("LDAP_USER_FILTER is not defined")
 
+    if not (postgresql_host_name := os.getenv("POSTGRESQL_HOST", None)):
+        raise ValueError("POSTGRESQL_HOST is not defined")
+    if not (postgresql_password := os.getenv("POSTGRESQL_PASSWORD", None)):
+        raise ValueError("POSTGRESQL_PASSWORD is not defined")
+    if not (postgresql_user_name := os.getenv("POSTGRESQL_USERNAME", None)):
+        raise ValueError("POSTGRESQL_USERNAME is not defined")
+
     main(
         ldap_group_base_dn=ldap_group_base_dn,
         ldap_group_filter=ldap_group_filter,
@@ -85,5 +106,10 @@ if __name__ == "__main__":
         ldap_user_base_dn=ldap_user_base_dn,
         ldap_user_filter=ldap_user_filter,
         ldap_user_name_attr=os.getenv("LDAP_USER_NAME_ATTR", "userPrincipalName"),
+        postgresql_database_name=os.getenv("POSTGRESQL_DB_NAME", "guacamole"),
+        postgresql_host_name=postgresql_host_name,
+        postgresql_password=postgresql_password,
+        postgresql_port=int(os.getenv("POSTGRESQL_PORT", 5432)),
+        postgresql_user_name=postgresql_user_name,
         repeat_interval=int(os.getenv("REPEAT_INTERVAL", 10)),
     )

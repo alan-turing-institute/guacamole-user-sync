@@ -1,8 +1,8 @@
 import logging
 
-from ldap.ldapobject import LDAPObject
-from ldap.asyncsearch import List as AsyncSearchList
 import ldap
+from ldap.asyncsearch import List as AsyncSearchList
+from ldap.ldapobject import LDAPObject
 
 from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPUser
 

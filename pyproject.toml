@@ -24,6 +24,7 @@ dependencies = [
   "psycopg==3.2.1",
   "python-ldap==3.4.4",
   "SQLAlchemy==2.0.32",
+  "sqlparse==0.5.1",
 ]
 
 [project.urls]
@@ -36,6 +37,7 @@ lint = [
   "black==24.8.0",
   "mypy==1.11.2",
   "ruff==0.6.2",
+  "types-SQLAlchemy==1.4.53.38",
 ]
 test = [
   "coverage==7.6.1",
@@ -78,6 +80,7 @@ strict = true                     # enable all optional error checking flags
 [[tool.mypy.overrides]]
 module = [
     "ldap.*",
+    "sqlparse.*",
 ]
 ignore_missing_imports = true
 
@@ -86,5 +89,6 @@ select = [
   # See https://beta.ruff.rs/docs/rules/
   "E",   # pycodestyle errors
   "F",   # pyflakes
+  "I",   # isort
   "W",   # pycodestyle warnings
 ]
