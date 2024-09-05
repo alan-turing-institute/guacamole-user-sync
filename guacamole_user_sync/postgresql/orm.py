@@ -43,3 +43,10 @@ class GuacamoleUserGroup(Base):
 
     user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     entity_id: Mapped[int] = mapped_column(Integer)
+
+
+class GuacamoleUserGroupMember(Base):
+    __tablename__ = "guacamole_user_group_member"
+
+    user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member_entity_id: Mapped[int] = mapped_column(Integer)

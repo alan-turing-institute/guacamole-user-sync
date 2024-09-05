@@ -7,12 +7,13 @@ from sqlalchemy.engine import URL, Engine  # type:ignore
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from guacamole_user_sync.models import LDAPGroup, LDAPUser
+from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLException
 
 from .orm import (
     GuacamoleEntity,
     GuacamoleUser,
     GuacamoleUserGroup,
+    GuacamoleUserGroupMember,
     guacamole_entity_type,
 )
 from .sql import GuacamoleSchema, SchemaVersion
@@ -53,6 +54,64 @@ class PostgreSQLClient:
             self._engine = create_engine(url_object, echo=False)
         return self._engine
 
+    def assign_users_to_groups(
+        self, groups: list[LDAPGroup], users: list[LDAPUser]
+    ) -> None:
+        logger.info(
+            f"Ensuring that {len(users)} user(s)"
+            f" are correctly assigned to {len(groups)} group(s)"
+        )
+        with Session(self.engine) as session:  # type:ignore
+            user_group_members = []
+            for group in groups:
+                # Get the user_group_id for each group (via looking up the entity_id)
+                try:
+                    group_entity_id = [
+                        item.entity_id
+                        for item in session.query(GuacamoleEntity).filter_by(
+                            name=group.name,
+                            type=guacamole_entity_type.USER_GROUP,
+                        )
+                    ][0]
+                    user_group_id = [
+                        item.user_group_id
+                        for item in session.query(GuacamoleUserGroup).filter_by(
+                            entity_id=group_entity_id,
+                        )
+                    ][0]
+                except IndexError:
+                    continue
+                # Get the user_entity_id for each user belonging to this group
+                for user_uid in group.member_uid:
+                    try:
+                        user = next(filter(lambda u: u.uid == user_uid, users))
+                    except StopIteration:
+                        continue
+                    try:
+                        user_entity_id = [
+                            item.entity_id
+                            for item in session.query(GuacamoleEntity).filter_by(
+                                name=user.name,
+                                type=guacamole_entity_type.USER,
+                            )
+                        ][0]
+                    except IndexError:
+                        continue
+                    # Create an entry in the user group member table
+                    user_group_members.append(
+                        GuacamoleUserGroupMember(
+                            user_group_id=user_group_id,
+                            member_entity_id=user_entity_id,
+                        )
+                    )
+            # Clear existing assignments then reassign
+            logger.info(
+                f"... creating {len(user_group_members)} user/group assignments."
+            )
+            session.query(GuacamoleUserGroupMember).delete()
+            session.add_all(user_group_members)
+            session.commit()
+
     def ensure_schema(self, schema_version: SchemaVersion) -> None:
         try:
             with self.engine.begin() as cnxn:
@@ -63,10 +122,12 @@ class PostgreSQLClient:
             raise PostgreSQLException from exc
 
     def update(self, *, groups: list[LDAPGroup], users: list[LDAPUser]) -> None:
+        """Update the relevant tables to match lists of LDAP users and groups"""
         self.update_groups(groups)
         self.update_users(users)
         self.update_group_entities()
         self.update_user_entities(users)
+        self.assign_users_to_groups(groups, users)
 
     def update_groups(self, groups: list[LDAPGroup]) -> None:
         """Update the entities table with desired groups"""
