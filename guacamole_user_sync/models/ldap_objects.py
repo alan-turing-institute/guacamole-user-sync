@@ -12,6 +12,7 @@ class LDAPGroup:
     member: list[str]
     member_of: list[str]
     member_uid: list[str]
+    name: str
     object_class: list[str]
 
 
@@ -27,6 +28,7 @@ class LDAPUser:
     given_name: str
     home_directory: str
     member_of: list[str]
+    name: str
     object_class: list[str]
     sn: str
     uid: str

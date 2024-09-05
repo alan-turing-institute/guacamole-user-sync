@@ -4,7 +4,7 @@ import ldap
 from ldap.asyncsearch import List as AsyncSearchList
 from ldap.ldapobject import LDAPObject
 
-from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPUser
+from guacamole_user_sync.models import LDAPException, LDAPGroup, LDAPQuery, LDAPUser
 
 logger = logging.getLogger("guacamole_user_sync")
 
@@ -41,6 +41,7 @@ class LDAPClient:
                     member_uid=[
                         group.decode("utf-8") for group in attr_dict["memberUid"]
                     ],
+                    name=attr_dict[query.id_attr][0].decode("utf-8"),
                     object_class=[
                         objc.decode("utf-8") for objc in attr_dict["objectClass"]
                     ],
@@ -64,6 +65,7 @@ class LDAPClient:
                     member_of=[
                         group.decode("utf-8") for group in attr_dict["memberOf"]
                     ],
+                    name=attr_dict[query.id_attr][0].decode("utf-8"),
                     object_class=[
                         objc.decode("utf-8") for objc in attr_dict["objectClass"]
                     ],
@@ -89,12 +91,12 @@ class LDAPClient:
             partial = searcher.processResults()
             if partial:
                 logger.warning("Only partial results received.")
-        except ldap.SERVER_DOWN:
+        except ldap.SERVER_DOWN as exc:
             logger.warning("Server could not be reached.")
-            return results
-        except ldap.SIZELIMIT_EXCEEDED:
+            raise LDAPException from exc
+        except ldap.SIZELIMIT_EXCEEDED as exc:
             logger.warning("Server-side size limit exceeded.")
-            return results
+            raise LDAPException from exc
 
         results = searcher.allResults
         logger.debug(f"Server returned {len(results)} results.")

@@ -3,7 +3,9 @@ import logging
 import os
 import time
 
-from guacamole_user_sync import LDAPClient, LDAPQuery, PostgresqlClient, SchemaVersion
+from guacamole_user_sync.ldap import LDAPClient
+from guacamole_user_sync.models import LDAPException, LDAPQuery, PostgreSQLException
+from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
 logger = logging.getLogger("guacamole_user_sync")
 logging.basicConfig(
@@ -41,24 +43,23 @@ def main(
         filter=ldap_user_filter,
         id_attr=ldap_user_name_attr,
     )
+    postgresql_client = PostgreSQLClient(
+        database_name=postgresql_database_name,
+        host_name=postgresql_host_name,
+        port=postgresql_port,
+        user_name=postgresql_user_name,
+        user_password=postgresql_password,
+    )
 
     # Loop until terminated
     while True:
         # Run synchronisation step
         synchronise(
-            ldap_client,
+            ldap_client=ldap_client,
             ldap_group_query=ldap_group_query,
             ldap_user_query=ldap_user_query,
+            postgresql_client=postgresql_client,
         )
-
-        postgresql_client = PostgresqlClient(
-            database_name=postgresql_database_name,
-            host_name=postgresql_host_name,
-            port=postgresql_port,
-            user_name=postgresql_user_name,
-            user_password=postgresql_password,
-        )
-        postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
 
         # Wait before repeating
         logger.info(f"Waiting {repeat_interval} seconds.")
@@ -66,15 +67,30 @@ def main(
 
 
 def synchronise(
-    client: LDAPClient, *, ldap_group_query: LDAPQuery, ldap_user_query: LDAPQuery
+    *,
+    ldap_client: LDAPClient,
+    ldap_group_query: LDAPQuery,
+    ldap_user_query: LDAPQuery,
+    postgresql_client: PostgreSQLClient,
 ) -> None:
     logger.info("Starting synchronisation.")
-    ldap_groups = client.search_groups(ldap_group_query)
-    for ldap_group in ldap_groups:
-        logger.info(f"ldap_group: {ldap_group}")
-    ldap_users = client.search_users(ldap_user_query)
-    for ldap_user in ldap_users:
-        logger.info(f"ldap_user: {ldap_user}")
+    try:
+        ldap_groups = ldap_client.search_groups(ldap_group_query)
+        for ldap_group in ldap_groups:
+            logger.info(f"ldap_group: {ldap_group}")
+        ldap_users = ldap_client.search_users(ldap_user_query)
+        for ldap_user in ldap_users:
+            logger.info(f"ldap_user: {ldap_user}")
+    except LDAPException:
+        logger.warning("LDAP server query failed")
+        return
+
+    try:
+        postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
+        postgresql_client.update(groups=ldap_groups, users=ldap_users)
+    except PostgreSQLException:
+        logger.warning("PostgreSQL update failed")
+        return
 
 
 if __name__ == "__main__":
