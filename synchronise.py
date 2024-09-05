@@ -7,13 +7,6 @@ from guacamole_user_sync.ldap import LDAPClient
 from guacamole_user_sync.models import LDAPException, LDAPQuery, PostgreSQLException
 from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
-logger = logging.getLogger("guacamole_user_sync")
-logging.basicConfig(
-    level=logging.INFO,
-    format=r"%(asctime)s [%(levelname)-8s] %(message)s",
-    datefmt=r"%Y-%m-%d %H:%M:%S",
-)
-
 
 def main(
     ldap_group_base_dn: str,
@@ -76,11 +69,7 @@ def synchronise(
     logger.info("Starting synchronisation.")
     try:
         ldap_groups = ldap_client.search_groups(ldap_group_query)
-        for ldap_group in ldap_groups:
-            logger.info(f"ldap_group: {ldap_group}")
         ldap_users = ldap_client.search_users(ldap_user_query)
-        for ldap_user in ldap_users:
-            logger.info(f"ldap_user: {ldap_user}")
     except LDAPException:
         logger.warning("LDAP server query failed")
         return
@@ -112,6 +101,17 @@ if __name__ == "__main__":
         raise ValueError("POSTGRESQL_PASSWORD is not defined")
     if not (postgresql_user_name := os.getenv("POSTGRESQL_USERNAME", None)):
         raise ValueError("POSTGRESQL_USERNAME is not defined")
+
+    logging.basicConfig(
+        level=(
+            logging.DEBUG
+            if os.getenv("DEBUG", "False").lower() == "true"
+            else logging.INFO
+        ),
+        format=r"%(asctime)s [%(levelname)-8s] %(message)s",
+        datefmt=r"%Y-%m-%d %H:%M:%S",
+    )
+    logger = logging.getLogger("guacamole_user_sync")
 
     main(
         ldap_group_base_dn=ldap_group_base_dn,

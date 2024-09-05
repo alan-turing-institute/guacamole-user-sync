@@ -34,7 +34,7 @@ class GuacamoleSchema:
                 if isinstance(token, sqlparse.sql.Comment)
             ]
             if first_comment := next(filter(lambda item: item, comment_lines), None):
-                logger.info(f"... {first_comment}")
+                logger.debug(f"... {first_comment}")
             # Extract the command
             commands.append(
                 text(sqlparse.format(statement, strip_comments=True, compact=True))

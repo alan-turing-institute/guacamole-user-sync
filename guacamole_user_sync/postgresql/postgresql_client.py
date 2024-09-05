@@ -59,7 +59,7 @@ class PostgreSQLClient:
     ) -> None:
         logger.info(
             f"Ensuring that {len(users)} user(s)"
-            f" are correctly assigned to {len(groups)} group(s)"
+            f" are correctly assigned among {len(groups)} group(s)"
         )
         with Session(self.engine) as session:  # type:ignore
             user_group_members = []
@@ -105,7 +105,7 @@ class PostgreSQLClient:
                         )
                     )
             # Clear existing assignments then reassign
-            logger.info(
+            logger.debug(
                 f"... creating {len(user_group_members)} user/group assignments."
             )
             session.query(GuacamoleUserGroupMember).delete()
@@ -142,7 +142,7 @@ class PostgreSQLClient:
                 )
             ]
             # Add groups
-            logger.info(
+            logger.debug(
                 f"There are {len(current_group_names)} group(s) currently registered"
             )
             group_names_to_add = [
@@ -150,7 +150,7 @@ class PostgreSQLClient:
                 for group_name in desired_group_names
                 if group_name not in current_group_names
             ]
-            logger.info(f"... {len(group_names_to_add)} group(s) will be added")
+            logger.debug(f"... {len(group_names_to_add)} group(s) will be added")
             session.add_all(
                 [
                     GuacamoleEntity(
@@ -165,7 +165,7 @@ class PostgreSQLClient:
                 for group_name in current_group_names
                 if group_name not in desired_group_names
             ]
-            logger.info(f"... {len(group_names_to_remove)} group(s) will be removed")
+            logger.debug(f"... {len(group_names_to_remove)} group(s) will be removed")
             for group_name in group_names_to_remove:
                 session.query(GuacamoleEntity).filter(
                     GuacamoleEntity.name == group_name,
@@ -179,7 +179,7 @@ class PostgreSQLClient:
             current_user_group_entity_ids = [
                 group.entity_id for group in session.query(GuacamoleUserGroup)
             ]
-            logger.info(
+            logger.debug(
                 f"There are {len(current_user_group_entity_ids)}"
                 " user group entit(y|ies) currently registered"
             )
@@ -190,7 +190,7 @@ class PostgreSQLClient:
                 )
                 if group.entity_id not in current_user_group_entity_ids
             ]
-            logger.info(
+            logger.debug(
                 f"... {len(new_group_entity_ids)} user group entit(y|ies) will be added"
             )
             session.add_all(
@@ -227,7 +227,7 @@ class PostgreSQLClient:
                 )
             ]
             # Add users
-            logger.info(
+            logger.debug(
                 f"There are {len(current_usernames)} user(s) currently registered"
             )
             usernames_to_add = [
@@ -235,7 +235,7 @@ class PostgreSQLClient:
                 for username in desired_usernames
                 if username not in current_usernames
             ]
-            logger.info(f"... {len(usernames_to_add)} user(s) will be added")
+            logger.debug(f"... {len(usernames_to_add)} user(s) will be added")
             session.add_all(
                 [
                     GuacamoleEntity(name=username, type=guacamole_entity_type.USER)
@@ -248,7 +248,7 @@ class PostgreSQLClient:
                 for username in current_usernames
                 if username not in desired_usernames
             ]
-            logger.info(f"... {len(usernames_to_remove)} user(s) will be removed")
+            logger.debug(f"... {len(usernames_to_remove)} user(s) will be removed")
             for username in usernames_to_remove:
                 session.query(GuacamoleEntity).filter(
                     GuacamoleEntity.name == username,
@@ -262,7 +262,7 @@ class PostgreSQLClient:
             current_user_entity_ids = [
                 user.entity_id for user in session.query(GuacamoleUser)
             ]
-            logger.info(
+            logger.debug(
                 f"There are {len(current_user_entity_ids)} "
                 "user entit(y|ies) currently registered"
             )
@@ -273,7 +273,7 @@ class PostgreSQLClient:
                 )
                 if user.entity_id not in current_user_entity_ids
             ]
-            logger.info(
+            logger.debug(
                 f"... {len(current_user_entity_ids)} user entit(y|ies) will be added"
             )
             session.add_all(

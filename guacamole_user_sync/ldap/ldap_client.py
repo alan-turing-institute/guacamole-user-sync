@@ -26,7 +26,6 @@ class LDAPClient:
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
         output = []
         for result in self.search(query):
-            logger.info(result)
             attr_dict = result[1][1]
             output.append(
                 LDAPGroup(
@@ -47,6 +46,7 @@ class LDAPClient:
                     ],
                 )
             )
+        logger.debug(f"Loaded {len(output)} LDAP groups")
         return output
 
     def search_users(self, query: LDAPQuery) -> list[LDAPUser]:
@@ -74,6 +74,7 @@ class LDAPClient:
                     uid_number=int(attr_dict["uidNumber"][0].decode("utf-8")),
                 )
             )
+        logger.debug(f"Loaded {len(output)} LDAP users")
         return output
 
     def search(self, query: LDAPQuery) -> LDAPSearchResult:
