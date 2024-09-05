@@ -58,9 +58,9 @@ class PostgreSQLClient:
             with self.engine.begin() as cnxn:
                 for command in GuacamoleSchema.commands(schema_version):
                     cnxn.execute(command)
-        except OperationalError:
+        except OperationalError as exc:
             logger.warning("Unable to connect to the PostgreSQL server.")
-            return None
+            raise PostgreSQLException from exc
 
     def update(self, *, groups: list[LDAPGroup], users: list[LDAPUser]) -> None:
         self.update_groups(groups)
