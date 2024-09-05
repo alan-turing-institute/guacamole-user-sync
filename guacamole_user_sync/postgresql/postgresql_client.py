@@ -141,6 +141,17 @@ class PostgreSQLClient:
                 ]
             )
             session.commit()
+            # Clean up any unused entries
+            valid_entity_ids = [
+                group.entity_id
+                for group in session.query(GuacamoleEntity).filter_by(
+                    type=guacamole_entity_type.USER_GROUP
+                )
+            ]
+            session.query(GuacamoleUserGroup).filter(
+                GuacamoleUserGroup.entity_id.not_in(valid_entity_ids)
+            ).delete()
+            session.commit()
 
     def update_users(self, users: list[LDAPUser]) -> None:
         """Update the entities table with desired users"""
@@ -216,4 +227,15 @@ class PostgreSQLClient:
                     for user_tuple in new_user_tuples
                 ]
             )
+            session.commit()
+            # Clean up any unused entries
+            valid_entity_ids = [
+                user.entity_id
+                for user in session.query(GuacamoleEntity).filter_by(
+                    type=guacamole_entity_type.USER
+                )
+            ]
+            session.query(GuacamoleUser).filter(
+                GuacamoleUser.entity_id.not_in(valid_entity_ids)
+            ).delete()
             session.commit()
