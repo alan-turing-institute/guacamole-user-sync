@@ -72,15 +72,18 @@ features = ["test"]
 
 [tool.hatch.envs.test.scripts]
 all = ["python-test", "python-coverage"]
-python-test = "coverage run --source guacamole_user_sync -m pytest {args: tests}"
+python-test = "coverage run -m pytest {args: tests}"
 python-coverage = "coverage report {args:}"
 
 [tool.mypy]
-strict = true  # enable all optional error checking flags
+disallow_untyped_decorators = false  # workaround for incorrectly-flagged pytest.fixture calls
+files = "guacamole_user_sync"        # run mypy over this directory
+strict = true                        # enable all optional error checking flags
 
 [[tool.mypy.overrides]]
 module = [
     "ldap.*",
+    "pytest.*",
     "sqlparse.*",
 ]
 ignore_missing_imports = true

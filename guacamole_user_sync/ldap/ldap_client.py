@@ -4,11 +4,15 @@ import ldap
 from ldap.asyncsearch import List as AsyncSearchList
 from ldap.ldapobject import LDAPObject
 
-from guacamole_user_sync.models import LDAPException, LDAPGroup, LDAPQuery, LDAPUser
+from guacamole_user_sync.models import (
+    LDAPException,
+    LDAPGroup,
+    LDAPQuery,
+    LDAPSearchResult,
+    LDAPUser,
+)
 
 logger = logging.getLogger("guacamole_user_sync")
-
-LDAPSearchResult = list[tuple[int, tuple[str, dict[str, list[bytes]]]]]
 
 
 class LDAPClient:
@@ -29,11 +33,6 @@ class LDAPClient:
             attr_dict = result[1][1]
             output.append(
                 LDAPGroup(
-                    dn=result[1][0],
-                    cn=attr_dict["cn"][0].decode("utf-8"),
-                    description=attr_dict["description"][0].decode("utf-8"),
-                    gid_number=int(attr_dict["gidNumber"][0].decode("utf-8")),
-                    member=[group.decode("utf-8") for group in attr_dict["member"]],
                     member_of=[
                         group.decode("utf-8") for group in attr_dict["memberOf"]
                     ],
@@ -41,9 +40,6 @@ class LDAPClient:
                         group.decode("utf-8") for group in attr_dict["memberUid"]
                     ],
                     name=attr_dict[query.id_attr][0].decode("utf-8"),
-                    object_class=[
-                        objc.decode("utf-8") for objc in attr_dict["objectClass"]
-                    ],
                 )
             )
         logger.debug(f"Loaded {len(output)} LDAP groups")
@@ -55,23 +51,12 @@ class LDAPClient:
             attr_dict = result[1][1]
             output.append(
                 LDAPUser(
-                    dn=result[1][0],
-                    cn=attr_dict["cn"][0].decode("utf-8"),
-                    description=attr_dict["description"][0].decode("utf-8"),
                     display_name=attr_dict["displayName"][0].decode("utf-8"),
-                    gid_number=int(attr_dict["gidNumber"][0].decode("utf-8")),
-                    given_name=attr_dict["givenName"][0].decode("utf-8"),
-                    home_directory=attr_dict["homeDirectory"][0].decode("utf-8"),
                     member_of=[
                         group.decode("utf-8") for group in attr_dict["memberOf"]
                     ],
                     name=attr_dict[query.id_attr][0].decode("utf-8"),
-                    object_class=[
-                        objc.decode("utf-8") for objc in attr_dict["objectClass"]
-                    ],
-                    sn=attr_dict["sn"][0].decode("utf-8"),
                     uid=attr_dict["uid"][0].decode("utf-8"),
-                    uid_number=int(attr_dict["uidNumber"][0].decode("utf-8")),
                 )
             )
         logger.debug(f"Loaded {len(output)} LDAP users")
