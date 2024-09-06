@@ -15,11 +15,11 @@ class guacamole_entity_type(enum.Enum):
     USER_GROUP = "USER_GROUP"
 
 
-class Base(DeclarativeBase):  # type:ignore
+class GuacamoleBase(DeclarativeBase):  # type:ignore
     pass
 
 
-class GuacamoleEntity(Base):
+class GuacamoleEntity(GuacamoleBase):
     __tablename__ = "guacamole_entity"
 
     entity_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -27,7 +27,7 @@ class GuacamoleEntity(Base):
     type: Mapped[guacamole_entity_type] = mapped_column(Enum(guacamole_entity_type))
 
 
-class GuacamoleUser(Base):
+class GuacamoleUser(GuacamoleBase):
     __tablename__ = "guacamole_user"
 
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -38,14 +38,14 @@ class GuacamoleUser(Base):
     password_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
-class GuacamoleUserGroup(Base):
+class GuacamoleUserGroup(GuacamoleBase):
     __tablename__ = "guacamole_user_group"
 
     user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     entity_id: Mapped[int] = mapped_column(Integer)
 
 
-class GuacamoleUserGroupMember(Base):
+class GuacamoleUserGroupMember(GuacamoleBase):
     __tablename__ = "guacamole_user_group_member"
 
     user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
