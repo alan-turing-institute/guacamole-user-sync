@@ -14,7 +14,11 @@ from guacamole_user_sync.models import (
     LDAPUser,
 )
 
-from .mocks import MockAsyncSearchListFullResults, MockLDAPObject
+from .mocks import (
+    MockAsyncSearchListFullResults,
+    MockAsyncSearchListPartialResults,
+    MockLDAPObject,
+)
 
 
 class TestLDAPClient:
@@ -58,6 +62,24 @@ class TestLDAPClient:
             client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
         assert "Server-side size limit exceeded." in caplog.text
 
+    def test_search_failure_partial(
+        self,
+        caplog: Any,
+        # monkeypatch: Any,
+        ldap_response_groups_fixture: LDAPSearchResult,
+    ) -> None:
+        caplog.set_level(logging.DEBUG)
+        with mock.patch(
+            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList"
+        ) as mock_async_search_list:
+            mock_async_search_list.return_value = MockAsyncSearchListPartialResults(
+                results=ldap_response_groups_fixture[0:1]
+            )
+            client = LDAPClient(hostname="test-host")
+            client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
+        assert "Only partial results received." in caplog.text
+        assert "Server returned 1 results." in caplog.text
+
     def test_search_groups(
         self,
         caplog: Any,
@@ -76,6 +98,7 @@ class TestLDAPClient:
             users = client.search_groups(query=ldap_query_groups_fixture)
             for user in ldap_model_groups_fixture:
                 assert user in users
+        assert "Server returned 3 results." in caplog.text
         assert "Loaded 3 LDAP groups" in caplog.text
 
     def test_search_users(
@@ -96,4 +119,5 @@ class TestLDAPClient:
             users = client.search_users(query=ldap_query_users_fixture)
             for user in ldap_model_users_fixture:
                 assert user in users
+        assert "Server returned 2 results." in caplog.text
         assert "Loaded 2 LDAP users" in caplog.text
