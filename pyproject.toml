@@ -44,6 +44,13 @@ test = [
   "pytest==8.3.2",
 ]
 
+[tool.coverage.paths]
+source = ["guacamole_user_sync/"]
+
+[tool.coverage.run]
+omit = ["tests/*"]
+relative_files = true
+
 [tool.hatch.version]
 path = "guacamole_user_sync/__about__.py"
 

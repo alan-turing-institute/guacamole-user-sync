@@ -30,8 +30,3 @@ class MockAsyncSearchListFullResults(MockAsyncSearchList):
 class MockAsyncSearchListPartialResults(MockAsyncSearchList):
     def __init__(self, results: LDAPSearchResult) -> None:
         super().__init__(results=results, partial=True)
-
-
-# class MockListUsersHasResults(MockAsyncSearchList):
-#     def __init__(self, results: LDAPSearchResult) -> None:
-#         super().__init__(results=results, partial=False)

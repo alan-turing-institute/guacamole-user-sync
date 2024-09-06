@@ -2,9 +2,16 @@ from typing import Any
 from unittest import mock
 
 import ldap
+import pytest
 
 from guacamole_user_sync.ldap import LDAPClient
-from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPSearchResult, LDAPUser
+from guacamole_user_sync.models import (
+    LDAPException,
+    LDAPGroup,
+    LDAPQuery,
+    LDAPSearchResult,
+    LDAPUser,
+)
 
 from .mocks import MockAsyncSearchListFullResults, MockLDAPObject
 
@@ -23,6 +30,32 @@ class TestLDAPClient:
         client = LDAPClient(hostname="test-host")
         assert isinstance(client.host, MockLDAPObject)
         assert client.host.uri == "ldap://test-host"
+
+    def test_search_exception_server_down(self, monkeypatch: Any, caplog: Any) -> None:
+        def mock_raise_server_down(*args: Any) -> None:
+            raise ldap.SERVER_DOWN
+
+        monkeypatch.setattr(
+            ldap.asyncsearch.List, "startSearch", mock_raise_server_down
+        )
+        client = LDAPClient(hostname="test-host")
+        with pytest.raises(LDAPException):
+            client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
+        assert "Server could not be reached." in caplog.text
+
+    def test_search_exception_sizelimit_exceeded(
+        self, monkeypatch: Any, caplog: Any
+    ) -> None:
+        def mock_raise_sizelimit_exceeded(*args: Any) -> None:
+            raise ldap.SIZELIMIT_EXCEEDED
+
+        monkeypatch.setattr(
+            ldap.asyncsearch.List, "startSearch", mock_raise_sizelimit_exceeded
+        )
+        client = LDAPClient(hostname="test-host")
+        with pytest.raises(LDAPException):
+            client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
+        assert "Server-side size limit exceeded." in caplog.text
 
     def test_search_groups(
         self,
