@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from unittest import mock
 
@@ -59,10 +60,12 @@ class TestLDAPClient:
 
     def test_search_groups(
         self,
+        caplog: Any,
         ldap_query_groups_fixture: LDAPQuery,
         ldap_response_groups_fixture: LDAPSearchResult,
         ldap_model_groups_fixture: list[LDAPGroup],
     ) -> None:
+        caplog.set_level(logging.DEBUG)
         with mock.patch(
             "guacamole_user_sync.ldap.ldap_client.AsyncSearchList"
         ) as mock_async_search_list:
@@ -73,13 +76,16 @@ class TestLDAPClient:
             users = client.search_groups(query=ldap_query_groups_fixture)
             for user in ldap_model_groups_fixture:
                 assert user in users
+        assert "Loaded 3 LDAP groups" in caplog.text
 
     def test_search_users(
         self,
+        caplog: Any,
         ldap_query_users_fixture: LDAPQuery,
         ldap_response_users_fixture: LDAPSearchResult,
         ldap_model_users_fixture: list[LDAPUser],
     ) -> None:
+        caplog.set_level(logging.DEBUG)
         with mock.patch(
             "guacamole_user_sync.ldap.ldap_client.AsyncSearchList"
         ) as mock_async_search_list:
@@ -90,3 +96,4 @@ class TestLDAPClient:
             users = client.search_users(query=ldap_query_users_fixture)
             for user in ldap_model_users_fixture:
                 assert user in users
+        assert "Loaded 2 LDAP users" in caplog.text
