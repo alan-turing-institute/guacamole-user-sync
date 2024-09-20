@@ -40,7 +40,7 @@ lint = [
     "types-SQLAlchemy==1.4.53.38",
 ]
 test = [
-    "coverage==7.6.1",
+    "coverage[toml]==7.6.1",
     "pytest==8.3.2",
 ]
 
@@ -51,6 +51,7 @@ source = ["guacamole_user_sync/"]
 show_missing = true
 
 [tool.coverage.run]
+include = ["guacamole_user_sync/*"]
 omit = ["tests/*"]
 relative_files = true
 
