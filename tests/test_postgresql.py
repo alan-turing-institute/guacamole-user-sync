@@ -96,6 +96,41 @@ class TestPostgreSQLClient:
             assert "Working on group 'everyone'" in caplog.text
             assert "Working on group 'plaintiffs'" in caplog.text
 
+    def test_assign_users_to_groups_missing_users(
+        self,
+        caplog: Any,
+        ldap_model_groups_fixture: list[LDAPGroup],
+        ldap_model_users_fixture: list[LDAPUser],
+        postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+    ) -> None:
+        caplog.set_level(logging.DEBUG)
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
+                query_results={
+                    GuacamoleEntity: [
+                        [entity] for entity in postgresql_model_guacamoleentity_fixture
+                    ],
+                    GuacamoleUserGroup: [
+                        [usergroup]
+                        for usergroup in postgresql_model_guacamoleusergroup_fixture
+                    ],
+                }
+            )
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.assign_users_to_groups(
+                ldap_model_groups_fixture, ldap_model_users_fixture[0:1]
+            )
+            for output_line in (
+                "Ensuring that 1 user(s) are correctly assigned among 3 group(s)",
+                "Could not find user with UID numerius.negidius",
+                "... creating 2 user/group assignments",
+            ):
+                assert output_line in caplog.text
+
     def test_ensure_schema(self, capsys: Any) -> None:
         # caplog.set_level(logging.DEBUG)
         with mock.patch(

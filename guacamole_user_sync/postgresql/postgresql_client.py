@@ -78,6 +78,7 @@ class PostgreSQLClient:
                 try:
                     user = next(filter(lambda u: u.uid == user_uid, users))
                 except StopIteration:
+                    logger.debug(f"Could not find user with UID {user_uid}")
                     continue
                 try:
                     user_entity_id = [
