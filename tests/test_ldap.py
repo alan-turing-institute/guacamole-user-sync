@@ -65,7 +65,6 @@ class TestLDAPClient:
     def test_search_failure_partial(
         self,
         caplog: Any,
-        # monkeypatch: Any,
         ldap_response_groups_fixture: LDAPSearchResult,
     ) -> None:
         caplog.set_level(logging.DEBUG)

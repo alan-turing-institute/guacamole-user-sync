@@ -1,6 +1,11 @@
 import pytest
 
 from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPSearchResult, LDAPUser
+from guacamole_user_sync.postgresql.orm import (
+    GuacamoleEntity,
+    GuacamoleUserGroup,
+    guacamole_entity_type,
+)
 
 
 @pytest.fixture
@@ -8,13 +13,13 @@ def ldap_model_groups_fixture() -> list[LDAPGroup]:
     return [
         LDAPGroup(
             member_of=[],
-            member_uid=["aulus.agerius", "numerius.negidius"],
-            name="everyone",
+            member_uid=["numerius.negidius"],
+            name="defendants",
         ),
         LDAPGroup(
             member_of=[],
-            member_uid=["numerius.negidius"],
-            name="defendants",
+            member_uid=["aulus.agerius", "numerius.negidius"],
+            name="everyone",
         ),
         LDAPGroup(
             member_of=[],
@@ -125,5 +130,38 @@ def ldap_response_users_fixture() -> LDAPSearchResult:
                     "userName": [b"numerius.negidius@rome.la"],
                 },
             ),
+        ),
+    ]
+
+
+@pytest.fixture
+def postgresql_model_guacamole_entity_groups_fixture() -> list[GuacamoleEntity]:
+    return [
+        GuacamoleEntity(
+            entity_id=1, name="defendants", type=guacamole_entity_type.USER_GROUP
+        ),
+        GuacamoleEntity(
+            entity_id=2, name="everyone", type=guacamole_entity_type.USER_GROUP
+        ),
+        GuacamoleEntity(
+            entity_id=3, name="plaintiffs", type=guacamole_entity_type.USER_GROUP
+        ),
+    ]
+
+
+@pytest.fixture
+def postgresql_model_guacamole_user_groups_fixture() -> list[GuacamoleUserGroup]:
+    return [
+        GuacamoleUserGroup(
+            entity_id=1,
+            user_group_id=11,
+        ),
+        GuacamoleUserGroup(
+            entity_id=2,
+            user_group_id=12,
+        ),
+        GuacamoleUserGroup(
+            entity_id=3,
+            user_group_id=13,
         ),
     ]
