@@ -1,5 +1,7 @@
 from typing import Any, Generic, TypeVar
 
+from sqlalchemy.sql.expression import TextClause
+
 from guacamole_user_sync.models import LDAPSearchResult
 
 
@@ -48,8 +50,9 @@ class MockPostgreSQLBackend(Generic[T]):
     def delete(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def execute_commands(self, *args: Any, **kwargs: Any) -> None:
-        pass
+    def execute_commands(self, commands: list[TextClause]) -> None:
+        for command in commands:
+            print(f"Executing {command}")
 
     def query(self, table: T, **filter_kwargs: Any) -> Any:
         return self.query_results[table].pop()
