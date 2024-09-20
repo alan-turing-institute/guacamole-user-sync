@@ -1,8 +1,11 @@
+from datetime import datetime
+
 import pytest
 
 from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPSearchResult, LDAPUser
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
+    GuacamoleUser,
     GuacamoleUserGroup,
     guacamole_entity_type,
 )
@@ -156,7 +159,9 @@ def postgresql_model_guacamoleentity_USER_fixture() -> list[GuacamoleEntity]:
             entity_id=4, name="aulus.agerius@rome.la", type=guacamole_entity_type.USER
         ),
         GuacamoleEntity(
-            entity_id=5, name="numerius.negidius@rome.la", type=guacamole_entity_type.USER
+            entity_id=5,
+            name="numerius.negidius@rome.la",
+            type=guacamole_entity_type.USER,
         ),
     ]
 
@@ -170,6 +175,28 @@ def postgresql_model_guacamoleentity_fixture(
         postgresql_model_guacamoleentity_USER_GROUP_fixture
         + postgresql_model_guacamoleentity_USER_fixture
     )
+
+
+@pytest.fixture
+def postgresql_model_guacamoleuser_fixture() -> list[GuacamoleUser]:
+    return [
+        GuacamoleUser(
+            user_id=1,
+            entity_id=4,
+            full_name="Aulus Agerius",
+            password_hash=b"PASSWORD_HASH",
+            password_salt=b"PASSWORD_SALT",
+            password_date=datetime(1, 1, 1),
+        ),
+        GuacamoleUser(
+            user_id=2,
+            entity_id=5,
+            full_name="Numerius Negidius",
+            password_hash=b"PASSWORD_HASH",
+            password_salt=b"PASSWORD_SALT",
+            password_date=datetime(1, 1, 1),
+        ),
+    ]
 
 
 @pytest.fixture

@@ -10,6 +10,7 @@ from guacamole_user_sync.models import LDAPGroup, LDAPUser
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
+    GuacamoleUser,
     GuacamoleUserGroup,
     guacamole_entity_type,
 )
@@ -277,3 +278,33 @@ class TestPostgreSQLClient:
             assert "There are 2 user(s) currently registered" in caplog.text
             assert "... 1 user(s) will be added" in caplog.text
             assert "... 1 user(s) will be removed" in caplog.text
+
+    def test_update_user_entities(
+        self,
+        caplog: Any,
+        ldap_model_users_fixture: list[LDAPUser],
+        postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
+        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+    ) -> None:
+        caplog.set_level(logging.DEBUG)
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
+                query_results={
+                    GuacamoleEntity: [
+                        postgresql_model_guacamoleentity_USER_fixture,
+                        postgresql_model_guacamoleentity_USER_fixture,
+                    ],
+                    GuacamoleUser: [postgresql_model_guacamoleuser_fixture[0:1]],
+                }
+            )
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.update_user_entities(ldap_model_users_fixture)
+            for output_line in (
+                "There are 1 user entit(y|ies) currently registered",
+                "... 1 user entit(y|ies) will be added",
+                "There are 2 valid user entit(y|ies)",
+            ):
+                assert output_line in caplog.text
