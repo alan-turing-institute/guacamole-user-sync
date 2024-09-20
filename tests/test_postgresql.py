@@ -8,7 +8,11 @@ from sqlalchemy.pool.impl import QueuePool
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
-from guacamole_user_sync.postgresql.orm import GuacamoleEntity, GuacamoleUserGroup
+from guacamole_user_sync.postgresql.orm import (
+    GuacamoleEntity,
+    GuacamoleUserGroup,
+    guacamole_entity_type,
+)
 from guacamole_user_sync.postgresql.sql import SchemaVersion
 
 from .mocks import MockPostgreSQLBackend
@@ -60,8 +64,8 @@ class TestPostgreSQLClient:
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
-        postgresql_model_guacamole_entity_groups_fixture: list[GuacamoleEntity],
-        postgresql_model_guacamole_user_groups_fixture: list[GuacamoleUserGroup],
+        postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         caplog.set_level(logging.DEBUG)
         with mock.patch(
@@ -70,12 +74,11 @@ class TestPostgreSQLClient:
             mock_postgresql_backend.return_value = MockPostgreSQLBackend(
                 query_results={
                     GuacamoleEntity: [
-                        [entity]
-                        for entity in postgresql_model_guacamole_entity_groups_fixture
+                        [entity] for entity in postgresql_model_guacamoleentity_fixture
                     ],
                     GuacamoleUserGroup: [
                         [usergroup]
-                        for usergroup in postgresql_model_guacamole_user_groups_fixture
+                        for usergroup in postgresql_model_guacamoleusergroup_fixture
                     ],
                 }
             )
@@ -184,10 +187,7 @@ class TestPostgreSQLClient:
         self,
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],
-        postgresql_model_guacamole_entity_groups_fixture: list[GuacamoleEntity],
-        postgresql_model_guacamole_entity_incorrect_groups_fixture: list[
-            GuacamoleEntity
-        ],
+        postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
     ) -> None:
         caplog.set_level(logging.DEBUG)
         with mock.patch(
@@ -196,8 +196,14 @@ class TestPostgreSQLClient:
             mock_postgresql_backend.return_value = MockPostgreSQLBackend(
                 query_results={
                     GuacamoleEntity: [
-                        postgresql_model_guacamole_entity_groups_fixture[0:1]
-                        + postgresql_model_guacamole_entity_incorrect_groups_fixture
+                        postgresql_model_guacamoleentity_fixture[0:1]
+                        + [
+                            GuacamoleEntity(
+                                entity_id=99,
+                                name="to-be-deleted",
+                                type=guacamole_entity_type.USER_GROUP,
+                            )
+                        ],
                     ]
                 }
             )
@@ -208,3 +214,34 @@ class TestPostgreSQLClient:
             assert "There are 2 group(s) currently registered" in caplog.text
             assert "... 2 group(s) will be added" in caplog.text
             assert "... 1 group(s) will be removed" in caplog.text
+
+    def test_update_group_entities(
+        self,
+        caplog: Any,
+        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+    ) -> None:
+        caplog.set_level(logging.DEBUG)
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
+                query_results={
+                    GuacamoleEntity: [
+                        postgresql_model_guacamoleentity_USER_GROUP_fixture,
+                        postgresql_model_guacamoleentity_USER_GROUP_fixture,
+                    ],
+                    GuacamoleUserGroup: [
+                        postgresql_model_guacamoleusergroup_fixture[0:1]
+                    ],
+                }
+            )
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.update_group_entities()
+            for output_line in (
+                "There are 1 user group entit(y|ies) currently registered",
+                "... 2 user group entit(y|ies) will be added",
+                "There are 3 valid user group entit(y|ies)",
+            ):
+                assert output_line in caplog.text

@@ -55,4 +55,4 @@ class MockPostgreSQLBackend(Generic[T]):
             print(f"Executing {command}")
 
     def query(self, table: T, **filter_kwargs: Any) -> Any:
-        return self.query_results[table].pop()
+        return self.query_results[table].pop(0)

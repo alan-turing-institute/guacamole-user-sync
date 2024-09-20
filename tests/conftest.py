@@ -135,7 +135,7 @@ def ldap_response_users_fixture() -> LDAPSearchResult:
 
 
 @pytest.fixture
-def postgresql_model_guacamole_entity_groups_fixture() -> list[GuacamoleEntity]:
+def postgresql_model_guacamoleentity_USER_GROUP_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
             entity_id=1, name="defendants", type=guacamole_entity_type.USER_GROUP
@@ -150,18 +150,30 @@ def postgresql_model_guacamole_entity_groups_fixture() -> list[GuacamoleEntity]:
 
 
 @pytest.fixture
-def postgresql_model_guacamole_entity_incorrect_groups_fixture() -> (
-    list[GuacamoleEntity]
-):
+def postgresql_model_guacamoleentity_USER_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
-            entity_id=4, name="to-be-deleted", type=guacamole_entity_type.USER_GROUP
+            entity_id=4, name="aulus.agerius", type=guacamole_entity_type.USER
+        ),
+        GuacamoleEntity(
+            entity_id=5, name="numerius.negidius", type=guacamole_entity_type.USER
         ),
     ]
 
 
 @pytest.fixture
-def postgresql_model_guacamole_user_groups_fixture() -> list[GuacamoleUserGroup]:
+def postgresql_model_guacamoleentity_fixture(
+    postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+    postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+) -> list[GuacamoleEntity]:
+    return (
+        postgresql_model_guacamoleentity_USER_GROUP_fixture
+        + postgresql_model_guacamoleentity_USER_fixture
+    )
+
+
+@pytest.fixture
+def postgresql_model_guacamoleusergroup_fixture() -> list[GuacamoleUserGroup]:
     return [
         GuacamoleUserGroup(
             entity_id=1,
