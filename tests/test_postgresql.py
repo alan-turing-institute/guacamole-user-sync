@@ -179,3 +179,32 @@ class TestPostgreSQLClient:
                 assert (
                     f"Executing CREATE INDEX IF NOT EXISTS {index_name}" in captured.out
                 )
+
+    def test_update_groups(
+        self,
+        caplog: Any,
+        ldap_model_groups_fixture: list[LDAPGroup],
+        postgresql_model_guacamole_entity_groups_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamole_entity_incorrect_groups_fixture: list[
+            GuacamoleEntity
+        ],
+    ) -> None:
+        caplog.set_level(logging.DEBUG)
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
+                query_results={
+                    GuacamoleEntity: [
+                        postgresql_model_guacamole_entity_groups_fixture[0:1]
+                        + postgresql_model_guacamole_entity_incorrect_groups_fixture
+                    ]
+                }
+            )
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.update_groups(ldap_model_groups_fixture)
+            assert "Ensuring that 3 group(s) are registered" in caplog.text
+            assert "There are 2 group(s) currently registered" in caplog.text
+            assert "... 2 group(s) will be added" in caplog.text
+            assert "... 1 group(s) will be removed" in caplog.text

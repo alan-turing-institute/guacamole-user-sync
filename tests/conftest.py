@@ -150,6 +150,17 @@ def postgresql_model_guacamole_entity_groups_fixture() -> list[GuacamoleEntity]:
 
 
 @pytest.fixture
+def postgresql_model_guacamole_entity_incorrect_groups_fixture() -> (
+    list[GuacamoleEntity]
+):
+    return [
+        GuacamoleEntity(
+            entity_id=4, name="to-be-deleted", type=guacamole_entity_type.USER_GROUP
+        ),
+    ]
+
+
+@pytest.fixture
 def postgresql_model_guacamole_user_groups_fixture() -> list[GuacamoleUserGroup]:
     return [
         GuacamoleUserGroup(
