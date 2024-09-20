@@ -187,7 +187,7 @@ class TestPostgreSQLClient:
         self,
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],
-        postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
     ) -> None:
         caplog.set_level(logging.DEBUG)
         with mock.patch(
@@ -196,7 +196,7 @@ class TestPostgreSQLClient:
             mock_postgresql_backend.return_value = MockPostgreSQLBackend(
                 query_results={
                     GuacamoleEntity: [
-                        postgresql_model_guacamoleentity_fixture[0:1]
+                        postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1]
                         + [
                             GuacamoleEntity(
                                 entity_id=99,
@@ -245,3 +245,35 @@ class TestPostgreSQLClient:
                 "There are 3 valid user group entit(y|ies)",
             ):
                 assert output_line in caplog.text
+
+    def test_update_users(
+        self,
+        caplog: Any,
+        ldap_model_users_fixture: list[LDAPUser],
+        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+    ) -> None:
+        caplog.set_level(logging.DEBUG)
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
+                query_results={
+                    GuacamoleEntity: [
+                        postgresql_model_guacamoleentity_USER_fixture[0:1]
+                        + [
+                            GuacamoleEntity(
+                                entity_id=99,
+                                name="to-be-deleted",
+                                type=guacamole_entity_type.USER,
+                            )
+                        ],
+                    ]
+                }
+            )
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.update_users(ldap_model_users_fixture)
+            assert "Ensuring that 2 user(s) are registered" in caplog.text
+            assert "There are 2 user(s) currently registered" in caplog.text
+            assert "... 1 user(s) will be added" in caplog.text
+            assert "... 1 user(s) will be removed" in caplog.text

@@ -153,10 +153,10 @@ def postgresql_model_guacamoleentity_USER_GROUP_fixture() -> list[GuacamoleEntit
 def postgresql_model_guacamoleentity_USER_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
-            entity_id=4, name="aulus.agerius", type=guacamole_entity_type.USER
+            entity_id=4, name="aulus.agerius@rome.la", type=guacamole_entity_type.USER
         ),
         GuacamoleEntity(
-            entity_id=5, name="numerius.negidius", type=guacamole_entity_type.USER
+            entity_id=5, name="numerius.negidius@rome.la", type=guacamole_entity_type.USER
         ),
     ]
 
