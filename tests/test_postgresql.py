@@ -22,13 +22,16 @@ from .mocks import MockPostgreSQLBackend, MockPostgreSQLEngine
 
 
 class TestPostgreSQLBackend:
-    def backend(self, *, engine: Any | None = None) -> PostgreSQLBackend:
+    def backend(
+        self, *, engine: Any | None = None, session: Any | None = None
+    ) -> PostgreSQLBackend:
         backend = PostgreSQLBackend(
             database_name="database_name",
             host_name="host_name",
             port=1234,
             user_name="user_name",
             user_password="user_password",
+            session=session,
         )
         if engine:
             backend._engine = engine
@@ -95,8 +98,7 @@ class TestPostgreSQLBackend:
     ) -> None:
         backend = self.backend(engine=MockPostgreSQLEngine())
         backend.delete(
-            GuacamoleEntity,
-            GuacamoleEntity.type == guacamole_entity_type.USER
+            GuacamoleEntity, GuacamoleEntity.type == guacamole_entity_type.USER
         )
 
         # Check method calls
@@ -110,6 +112,16 @@ class TestPostgreSQLBackend:
         assert len(execute_args) == 2
         assert isinstance(execute_args[0], Delete)
         assert isinstance(execute_args[1], dict) and len(execute_args[1]) == 0
+
+    def test_execute_commands(
+        self,
+    ) -> None:
+        command = text("SELECT * FROM guacamole_entity;")
+        mock_session = mock.MagicMock()
+        mock_session.__enter__.return_value = mock_session
+        backend: PostgreSQLBackend = self.backend(session=mock_session)
+        backend.execute_commands([command])
+        mock_session.execute.assert_called_once_with(command)
 
 
 class TestPostgreSQLClient:
