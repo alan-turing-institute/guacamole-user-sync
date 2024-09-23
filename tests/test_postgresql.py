@@ -5,8 +5,9 @@ from unittest import mock
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg
 from sqlalchemy.engine import URL, Engine  # type: ignore
+from sqlalchemy.orm import Session
 from sqlalchemy.pool.impl import QueuePool
-from sqlalchemy.sql import Delete, Insert
+from sqlalchemy.sql.elements import BinaryExpression
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
@@ -18,27 +19,31 @@ from guacamole_user_sync.postgresql.orm import (
 )
 from guacamole_user_sync.postgresql.sql import SchemaVersion
 
-from .mocks import MockPostgreSQLBackend, MockPostgreSQLEngine
+from .mocks import MockPostgreSQLBackend
 
 
 class TestPostgreSQLBackend:
-    def backend(
-        self, *, engine: Any | None = None, session: Any | None = None
-    ) -> PostgreSQLBackend:
+    def mock_backend(
+        self, test_session: bool = False
+    ) -> tuple[PostgreSQLBackend, mock.MagicMock]:
+        mock_session = mock.MagicMock()
+        mock_session.__enter__.return_value = mock_session
+        mock_session.filter.return_value = mock_session
+        mock_session.query.return_value = mock_session
         backend = PostgreSQLBackend(
             database_name="database_name",
             host_name="host_name",
             port=1234,
             user_name="user_name",
             user_password="user_password",
-            session=session,
+            session=mock_session,
         )
-        if engine:
-            backend._engine = engine
-        return backend
+        if test_session:
+            backend._session = None
+        return (backend, mock_session)
 
     def test_constructor(self) -> None:
-        backend = self.backend()
+        backend, _ = self.mock_backend()
         assert isinstance(backend, PostgreSQLBackend)
         assert backend.database_name == "database_name"
         assert backend.host_name == "host_name"
@@ -47,7 +52,7 @@ class TestPostgreSQLBackend:
         assert backend.user_password == "user_password"
 
     def test_engine(self) -> None:
-        backend = self.backend()
+        backend, _ = self.mock_backend()
         assert isinstance(backend.engine, Engine)
         assert isinstance(backend.engine.pool, QueuePool)
         assert isinstance(backend.engine.dialect, PGDialect_psycopg)
@@ -56,72 +61,115 @@ class TestPostgreSQLBackend:
         assert not backend.engine.echo
         assert not backend.engine.hide_parameters  # type: ignore
 
+    def test_session(self) -> None:
+        backend, _ = self.mock_backend(test_session=True)
+        assert isinstance(backend.session(), Session)
+
     def test_add_all(
         self,
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
     ) -> None:
-        backend = self.backend(engine=MockPostgreSQLEngine())
+        backend, session = self.mock_backend()
         backend.add_all(postgresql_model_guacamoleentity_fixture)
 
         # Check method calls
-        backend.engine.connect_method.execute.assert_called()  # type: ignore
-        backend.engine.connect_method.close.assert_called_once()  # type: ignore
+        session.add_all.assert_called_once()
+        session.__exit__.assert_called_once()
 
         # Check method arguments
-        execute_args = (
-            backend.engine.connect_method.execute.call_args.args  # type: ignore
-        )
-        assert len(execute_args) == 2
-        assert isinstance(execute_args[0], Insert)
-        assert len(execute_args[1]) == len(postgresql_model_guacamoleentity_fixture)
+        execute_args = session.add_all.call_args.args
+        assert len(execute_args) == 1
+        assert len(execute_args[0]) == len(postgresql_model_guacamoleentity_fixture)
 
     def test_delete(
         self,
     ) -> None:
-        backend = self.backend(engine=MockPostgreSQLEngine())
+        backend, session = self.mock_backend()
         backend.delete(GuacamoleEntity)
 
         # Check method calls
-        backend.engine.connect_method.execute.assert_called()  # type: ignore
-        backend.engine.connect_method.close.assert_called_once()  # type: ignore
+        print(session.mock_calls)
+        session.query.assert_called_once()
+        session.filter.assert_not_called()
+        session.delete.assert_called_once()
+        session.__exit__.assert_called_once()
 
         # Check method arguments
-        execute_args = (
-            backend.engine.connect_method.execute.call_args.args  # type: ignore
-        )
-        assert len(execute_args) == 2
-        assert isinstance(execute_args[0], Delete)
-        assert isinstance(execute_args[1], dict) and len(execute_args[1]) == 0
+        query_args = session.query.call_args.args
+        assert len(query_args) == 1
+        assert isinstance(query_args[0], type(GuacamoleEntity))
 
     def test_delete_with_filter(
         self,
     ) -> None:
-        backend = self.backend(engine=MockPostgreSQLEngine())
+        backend, session = self.mock_backend()
         backend.delete(
             GuacamoleEntity, GuacamoleEntity.type == guacamole_entity_type.USER
         )
 
         # Check method calls
-        backend.engine.connect_method.execute.assert_called()  # type: ignore
-        backend.engine.connect_method.close.assert_called_once()  # type: ignore
+        print(session.mock_calls)
+        session.query.assert_called_once()
+        session.filter.assert_called_once()
+        session.delete.assert_called_once()
+        session.__exit__.assert_called_once()
 
         # Check method arguments
-        execute_args = (
-            backend.engine.connect_method.execute.call_args.args  # type: ignore
-        )
-        assert len(execute_args) == 2
-        assert isinstance(execute_args[0], Delete)
-        assert isinstance(execute_args[1], dict) and len(execute_args[1]) == 0
+        query_args = session.query.call_args.args
+        assert len(query_args) == 1
+        assert isinstance(query_args[0], type(GuacamoleEntity))
+        filter_args = session.filter.call_args.args
+        assert len(filter_args) == 1
+        assert isinstance(filter_args[0], BinaryExpression)
 
     def test_execute_commands(
         self,
     ) -> None:
         command = text("SELECT * FROM guacamole_entity;")
-        mock_session = mock.MagicMock()
-        mock_session.__enter__.return_value = mock_session
-        backend: PostgreSQLBackend = self.backend(session=mock_session)
+        backend, session = self.mock_backend()
         backend.execute_commands([command])
-        mock_session.execute.assert_called_once_with(command)
+        session.execute.assert_called_once_with(command)
+
+    def test_query(
+        self,
+    ) -> None:
+        backend, session = self.mock_backend()
+        backend.query(
+            GuacamoleEntity
+        )  # , GuacamoleEntity.type == guacamole_entity_type.USER
+
+        # Check method calls
+        print(session.mock_calls)
+        session.query.assert_called_once()
+        session.filter.assert_not_called()
+        session.delete.assert_not_called()
+        session.__exit__.assert_called_once()
+
+        # Check method arguments
+        query_args = session.query.call_args.args
+        assert len(query_args) == 1
+        assert isinstance(query_args[0], type(GuacamoleEntity))
+
+    def test_query_with_filter(
+        self,
+    ) -> None:
+        backend, session = self.mock_backend()
+        backend.query(GuacamoleEntity, type=guacamole_entity_type.USER)
+
+        # Check method calls
+        print(session.mock_calls)
+        session.query.assert_called_once()
+        session.filter_by.assert_called_once()
+        session.__exit__.assert_called_once()
+
+        # Check method arguments
+        query_args = session.query.call_args.args
+        assert len(query_args) == 1
+        assert isinstance(query_args[0], type(GuacamoleEntity))
+        filter_by_kwargs = session.filter_by.call_args.kwargs
+        assert len(filter_by_kwargs) == 1
+        assert "type" in filter_by_kwargs
+        assert filter_by_kwargs["type"] == guacamole_entity_type.USER
 
 
 class TestPostgreSQLClient:
