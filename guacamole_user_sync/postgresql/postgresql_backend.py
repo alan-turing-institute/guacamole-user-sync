@@ -1,5 +1,5 @@
 import logging
-from typing import Any, TypeVar
+from typing import Any, Type, TypeVar
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL, Engine  # type:ignore
@@ -54,7 +54,7 @@ class PostgreSQLBackend:
             with session.begin():
                 session.add_all(items)
 
-    def delete(self, table: T, *filter_args: Any) -> None:
+    def delete(self, table: Type[T], *filter_args: Any) -> None:
         with self.session() as session:  # type:ignore
             with session.begin():
                 if filter_args:
@@ -68,7 +68,7 @@ class PostgreSQLBackend:
                 for command in commands:
                     session.execute(command)
 
-    def query(self, table: T, **filter_kwargs: Any) -> list[T]:
+    def query(self, table: Type[T], **filter_kwargs: Any) -> list[T]:
         with self.session() as session:  # type:ignore
             with session.begin():
                 if filter_kwargs:

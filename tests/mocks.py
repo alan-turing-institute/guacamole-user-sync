@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from sqlalchemy.sql.expression import TextClause
 
@@ -39,10 +39,10 @@ T = TypeVar("T")
 
 class MockPostgreSQLBackend(Generic[T]):
 
-    def __init__(
-        self, *args: Any, **kwargs: Any
-    ) -> None:
-        self.contents: dict[T, list[T]] = {}
+    def __init__(self, *data_lists: Any, **kwargs: Any) -> None:
+        self.contents: dict[Type[T], list[T]] = {}
+        for data_list in data_lists:
+            self.add_all(data_list)
 
     def add_all(self, items: list[T]) -> None:
         cls = type(items[0])
@@ -57,16 +57,18 @@ class MockPostgreSQLBackend(Generic[T]):
         for command in commands:
             print(f"Executing {command}")
 
-    def query(self, table: T, **filter_kwargs: Any) -> Any:
+    def query(self, table: Type[T], **filter_kwargs: Any) -> Any:
         results = [item for item in self.contents[table]]
 
         if "entity_id" in filter_kwargs:
-            results = [item for item in results if item.entity_id == filter_kwargs["entity_id"]]
+            results = [
+                item for item in results if item.entity_id == filter_kwargs["entity_id"]  # type: ignore
+            ]
 
         if "name" in filter_kwargs:
-            results = [item for item in results if item.name == filter_kwargs["name"]]
+            results = [item for item in results if item.name == filter_kwargs["name"]]  # type: ignore
 
         if "type" in filter_kwargs:
-            results = [item for item in results if item.type == filter_kwargs["type"]]
+            results = [item for item in results if item.type == filter_kwargs["type"]]  # type: ignore
 
         return results

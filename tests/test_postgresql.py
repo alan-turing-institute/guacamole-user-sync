@@ -134,9 +134,7 @@ class TestPostgreSQLBackend:
         self,
     ) -> None:
         backend, session = self.mock_backend()
-        backend.query(
-            GuacamoleEntity
-        )  # , GuacamoleEntity.type == guacamole_entity_type.USER
+        backend.query(GuacamoleEntity)
 
         # Check method calls
         print(session.mock_calls)
@@ -195,9 +193,10 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_fixture)
-        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture)
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_fixture,
+            postgresql_model_guacamoleusergroup_fixture,
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -229,9 +228,10 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_fixture)
-        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture)
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_fixture,
+            postgresql_model_guacamoleusergroup_fixture,
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -263,10 +263,11 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_USER_fixture[1:])
-        mock_backend.add_all(postgresql_model_guacamoleentity_USER_GROUP_fixture)
-        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture)
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_USER_fixture[1:],
+            postgresql_model_guacamoleentity_USER_GROUP_fixture,
+            postgresql_model_guacamoleusergroup_fixture,
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -296,9 +297,10 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_fixture)
-        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture[1:])
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_fixture,
+            postgresql_model_guacamoleusergroup_fixture[1:],
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -322,12 +324,14 @@ class TestPostgreSQLClient:
                 assert output_line in caplog.text
 
     def test_ensure_schema(self, capsys: Any) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()  # type: ignore
+
+        # Patch PostgreSQLBackend
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={}
-            )
+            mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.ensure_schema(SchemaVersion.v1_5_5)
@@ -415,9 +419,10 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_USER_GROUP_fixture)
-        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture[0:1])
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_USER_GROUP_fixture,
+            postgresql_model_guacamoleusergroup_fixture[0:1],
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -444,9 +449,16 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1])
-        mock_backend.add_all([GuacamoleEntity(entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER_GROUP)])
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1],
+            [
+                GuacamoleEntity(
+                    entity_id=99,
+                    name="to-be-deleted",
+                    type=guacamole_entity_type.USER_GROUP,
+                )
+            ],
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -472,9 +484,10 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_USER_fixture)
-        mock_backend.add_all(postgresql_model_guacamoleuser_fixture[0:1])
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_USER_fixture,
+            postgresql_model_guacamoleuser_fixture[0:1],
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -501,9 +514,14 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()
-        mock_backend.add_all(postgresql_model_guacamoleentity_USER_fixture[0:1])
-        mock_backend.add_all([GuacamoleEntity(entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER)])
+        mock_backend = MockPostgreSQLBackend(  # type: ignore
+            postgresql_model_guacamoleentity_USER_fixture[0:1],
+            [
+                GuacamoleEntity(
+                    entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER
+                )
+            ],
+        )
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
