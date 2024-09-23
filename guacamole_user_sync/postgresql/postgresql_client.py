@@ -115,7 +115,7 @@ class PostgreSQLClient:
             self.backend.execute_commands(GuacamoleSchema.commands(schema_version))
         except OperationalError as exc:
             logger.warning("Unable to connect to the PostgreSQL server.")
-            raise PostgreSQLException from exc
+            raise PostgreSQLException("Unable to ensure PostgreSQL schema.") from exc
 
     def update(self, *, groups: list[LDAPGroup], users: list[LDAPUser]) -> None:
         """Update the relevant tables to match lists of LDAP users and groups"""

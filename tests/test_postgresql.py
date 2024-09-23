@@ -2,14 +2,16 @@ import logging
 from typing import Any, ClassVar
 from unittest import mock
 
+import pytest
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg
 from sqlalchemy.engine import URL, Engine  # type: ignore
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool.impl import QueuePool
 from sqlalchemy.sql.elements import BinaryExpression
 
-from guacamole_user_sync.models import LDAPGroup, LDAPUser
+from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLException
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
@@ -411,6 +413,26 @@ class TestPostgreSQLClient:
                 assert (
                     f"Executing CREATE INDEX IF NOT EXISTS {index_name}" in captured.out
                 )
+
+    def test_ensure_schema_exception(self, capsys: Any) -> None:
+        # Create a mock backend
+        def execute_commands_exception(commands: Any) -> None:
+            raise OperationalError(statement="statement", params=None, orig=None)
+
+        mock_backend = MockPostgreSQLBackend()  # type: ignore
+        mock_backend.execute_commands = execute_commands_exception  # type: ignore
+
+        # Patch PostgreSQLBackend
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = mock_backend
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            with pytest.raises(
+                PostgreSQLException, match="Unable to ensure PostgreSQL schema."
+            ):
+                client.ensure_schema(SchemaVersion.v1_5_5)
 
     def test_update_group_entities(
         self,
