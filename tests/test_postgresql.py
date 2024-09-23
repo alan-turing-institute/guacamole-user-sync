@@ -2,10 +2,11 @@ import logging
 from typing import Any, ClassVar
 from unittest import mock
 
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg
 from sqlalchemy.engine import URL, Engine  # type: ignore
 from sqlalchemy.pool.impl import QueuePool
-from sqlalchemy.sql.dml import Insert
+from sqlalchemy.sql import Delete, Insert
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
@@ -70,6 +71,45 @@ class TestPostgreSQLBackend:
         assert len(execute_args) == 2
         assert isinstance(execute_args[0], Insert)
         assert len(execute_args[1]) == len(postgresql_model_guacamoleentity_fixture)
+
+    def test_delete(
+        self,
+    ) -> None:
+        backend = self.backend(engine=MockPostgreSQLEngine())
+        backend.delete(GuacamoleEntity)
+
+        # Check method calls
+        backend.engine.connect_method.execute.assert_called()  # type: ignore
+        backend.engine.connect_method.close.assert_called_once()  # type: ignore
+
+        # Check method arguments
+        execute_args = (
+            backend.engine.connect_method.execute.call_args.args  # type: ignore
+        )
+        assert len(execute_args) == 2
+        assert isinstance(execute_args[0], Delete)
+        assert isinstance(execute_args[1], dict) and len(execute_args[1]) == 0
+
+    def test_delete_with_filter(
+        self,
+    ) -> None:
+        backend = self.backend(engine=MockPostgreSQLEngine())
+        backend.delete(
+            GuacamoleEntity,
+            GuacamoleEntity.type == guacamole_entity_type.USER
+        )
+
+        # Check method calls
+        backend.engine.connect_method.execute.assert_called()  # type: ignore
+        backend.engine.connect_method.close.assert_called_once()  # type: ignore
+
+        # Check method arguments
+        execute_args = (
+            backend.engine.connect_method.execute.call_args.args  # type: ignore
+        )
+        assert len(execute_args) == 2
+        assert isinstance(execute_args[0], Delete)
+        assert isinstance(execute_args[1], dict) and len(execute_args[1]) == 0
 
 
 class TestPostgreSQLClient:

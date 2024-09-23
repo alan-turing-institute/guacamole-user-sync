@@ -158,6 +158,7 @@ class PostgreSQLClient:
         logger.debug(f"... {len(group_names_to_remove)} group(s) will be removed")
         for group_name in group_names_to_remove:
             self.backend.delete(
+                GuacamoleEntity,
                 GuacamoleEntity.name == group_name,
                 GuacamoleEntity.type == guacamole_entity_type.USER_GROUP,
             )

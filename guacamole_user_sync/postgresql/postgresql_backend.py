@@ -59,6 +59,7 @@ class PostgreSQLBackend:
         with self.engine.begin() as cnxn:
             for command in commands:
                 cnxn.execute(command)
+            cnxn.close()
 
     def query(self, table: T, **filter_kwargs: Any) -> list[T]:
         with Session(self.engine) as session:  # type:ignore
