@@ -72,13 +72,16 @@ class PostgreSQLClient:
                     f"-> entity_id: {group_entity_id}; user_group_id: {user_group_id}"
                 )
             except IndexError:
+                logger.debug(
+                    f"Could not determine user_group_id for group '{group.name}'."
+                )
                 continue
             # Get the user_entity_id for each user belonging to this group
             for user_uid in group.member_uid:
                 try:
                     user = next(filter(lambda u: u.uid == user_uid, users))
                 except StopIteration:
-                    logger.debug(f"Could not find user with UID {user_uid}")
+                    logger.debug(f"Could not find LDAP user with UID {user_uid}")
                     continue
                 try:
                     user_entity_id = [
@@ -93,7 +96,7 @@ class PostgreSQLClient:
                         f"... group member '{user}' has entity_id '{user_entity_id}'"
                     )
                 except IndexError:
-                    logger.debug(f"Could not find entity ID for user {user_uid}")
+                    logger.debug(f"Could not find entity ID for LDAP user {user_uid}")
                     continue
                 # Create an entry in the user group member table
                 user_group_members.append(

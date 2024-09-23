@@ -40,12 +40,15 @@ T = TypeVar("T")
 class MockPostgreSQLBackend(Generic[T]):
 
     def __init__(
-        self, query_results: dict[T, list[list[T]]], *args: Any, **kwargs: Any
+        self, *args: Any, **kwargs: Any
     ) -> None:
-        self.query_results = query_results
+        self.contents: dict[T, list[T]] = {}
 
-    def add_all(self, *args: Any, **kwargs: Any) -> None:
-        pass
+    def add_all(self, items: list[T]) -> None:
+        cls = type(items[0])
+        if cls not in self.contents:
+            self.contents[cls] = []
+        self.contents[cls] += items
 
     def delete(self, *args: Any, **kwargs: Any) -> None:
         pass
@@ -55,4 +58,15 @@ class MockPostgreSQLBackend(Generic[T]):
             print(f"Executing {command}")
 
     def query(self, table: T, **filter_kwargs: Any) -> Any:
-        return self.query_results[table].pop(0)
+        results = [item for item in self.contents[table]]
+
+        if "entity_id" in filter_kwargs:
+            results = [item for item in results if item.entity_id == filter_kwargs["entity_id"]]
+
+        if "name" in filter_kwargs:
+            results = [item for item in results if item.name == filter_kwargs["name"]]
+
+        if "type" in filter_kwargs:
+            results = [item for item in results if item.type == filter_kwargs["type"]]
+
+        return results

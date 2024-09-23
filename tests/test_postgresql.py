@@ -194,21 +194,19 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_fixture)
+        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture)
+
+        # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={
-                    GuacamoleEntity: [
-                        [entity] for entity in postgresql_model_guacamoleentity_fixture
-                    ],
-                    GuacamoleUserGroup: [
-                        [usergroup]
-                        for usergroup in postgresql_model_guacamoleusergroup_fixture
-                    ],
-                }
-            )
+            mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
@@ -222,7 +220,7 @@ class TestPostgreSQLClient:
             assert "Working on group 'everyone'" in caplog.text
             assert "Working on group 'plaintiffs'" in caplog.text
 
-    def test_assign_users_to_groups_missing_user(
+    def test_assign_users_to_groups_missing_ldap_user(
         self,
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],
@@ -230,21 +228,19 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_fixture)
+        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture)
+
+        # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={
-                    GuacamoleEntity: [
-                        [entity] for entity in postgresql_model_guacamoleentity_fixture
-                    ],
-                    GuacamoleUserGroup: [
-                        [usergroup]
-                        for usergroup in postgresql_model_guacamoleusergroup_fixture
-                    ],
-                }
-            )
+            mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
@@ -252,13 +248,80 @@ class TestPostgreSQLClient:
             )
             for output_line in (
                 "Ensuring that 1 user(s) are correctly assigned among 3 group(s)",
-                "Could not find user with UID numerius.negidius",
+                "Could not find LDAP user with UID numerius.negidius",
                 "... creating 2 user/group assignments",
             ):
                 assert output_line in caplog.text
 
+    def test_assign_users_to_groups_missing_user_entity(
+        self,
+        caplog: Any,
+        ldap_model_groups_fixture: list[LDAPGroup],
+        ldap_model_users_fixture: list[LDAPUser],
+        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+    ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_USER_fixture[1:])
+        mock_backend.add_all(postgresql_model_guacamoleentity_USER_GROUP_fixture)
+        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture)
+
+        # Capture logs at debug level and above
+        caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = mock_backend
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.assign_users_to_groups(
+                ldap_model_groups_fixture, ldap_model_users_fixture
+            )
+
+            for output_line in (
+                "Could not find entity ID for LDAP user aulus.agerius",
+            ):
+                assert output_line in caplog.text
+
+    def test_assign_users_to_groups_missing_usergroup(
+        self,
+        caplog: Any,
+        ldap_model_groups_fixture: list[LDAPGroup],
+        ldap_model_users_fixture: list[LDAPUser],
+        postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+    ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_fixture)
+        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture[1:])
+
+        # Capture logs at debug level and above
+        caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = mock_backend
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.assign_users_to_groups(
+                ldap_model_groups_fixture, ldap_model_users_fixture
+            )
+
+            for output_line in (
+                "Could not determine user_group_id for group 'defendants'.",
+                "-> entity_id: 2; user_group_id: 12",
+                "-> entity_id: 3; user_group_id: 13",
+            ):
+                assert output_line in caplog.text
+
     def test_ensure_schema(self, capsys: Any) -> None:
-        # caplog.set_level(logging.DEBUG)
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
@@ -345,59 +408,25 @@ class TestPostgreSQLClient:
                     f"Executing CREATE INDEX IF NOT EXISTS {index_name}" in captured.out
                 )
 
-    def test_update_groups(
-        self,
-        caplog: Any,
-        ldap_model_groups_fixture: list[LDAPGroup],
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
-    ) -> None:
-        caplog.set_level(logging.DEBUG)
-        with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
-        ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={
-                    GuacamoleEntity: [
-                        postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1]
-                        + [
-                            GuacamoleEntity(
-                                entity_id=99,
-                                name="to-be-deleted",
-                                type=guacamole_entity_type.USER_GROUP,
-                            )
-                        ],
-                    ]
-                }
-            )
-
-            client = PostgreSQLClient(**self.client_kwargs)
-            client.update_groups(ldap_model_groups_fixture)
-            assert "Ensuring that 3 group(s) are registered" in caplog.text
-            assert "There are 2 group(s) currently registered" in caplog.text
-            assert "... 2 group(s) will be added" in caplog.text
-            assert "... 1 group(s) will be removed" in caplog.text
-
     def test_update_group_entities(
         self,
         caplog: Any,
         postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_USER_GROUP_fixture)
+        mock_backend.add_all(postgresql_model_guacamoleusergroup_fixture[0:1])
+
+        # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={
-                    GuacamoleEntity: [
-                        postgresql_model_guacamoleentity_USER_GROUP_fixture,
-                        postgresql_model_guacamoleentity_USER_GROUP_fixture,
-                    ],
-                    GuacamoleUserGroup: [
-                        postgresql_model_guacamoleusergroup_fixture[0:1]
-                    ],
-                }
-            )
+            mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.update_group_entities()
@@ -408,37 +437,32 @@ class TestPostgreSQLClient:
             ):
                 assert output_line in caplog.text
 
-    def test_update_users(
+    def test_update_groups(
         self,
         caplog: Any,
-        ldap_model_users_fixture: list[LDAPUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+        ldap_model_groups_fixture: list[LDAPGroup],
+        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
     ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1])
+        mock_backend.add_all([GuacamoleEntity(entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER_GROUP)])
+
+        # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={
-                    GuacamoleEntity: [
-                        postgresql_model_guacamoleentity_USER_fixture[0:1]
-                        + [
-                            GuacamoleEntity(
-                                entity_id=99,
-                                name="to-be-deleted",
-                                type=guacamole_entity_type.USER,
-                            )
-                        ],
-                    ]
-                }
-            )
+            mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
-            client.update_users(ldap_model_users_fixture)
-            assert "Ensuring that 2 user(s) are registered" in caplog.text
-            assert "There are 2 user(s) currently registered" in caplog.text
-            assert "... 1 user(s) will be added" in caplog.text
-            assert "... 1 user(s) will be removed" in caplog.text
+            client.update_groups(ldap_model_groups_fixture)
+            assert "Ensuring that 3 group(s) are registered" in caplog.text
+            assert "There are 2 group(s) currently registered" in caplog.text
+            assert "... 2 group(s) will be added" in caplog.text
+            assert "... 1 group(s) will be removed" in caplog.text
 
     def test_update_user_entities(
         self,
@@ -447,19 +471,19 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
         postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
     ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_USER_fixture)
+        mock_backend.add_all(postgresql_model_guacamoleuser_fixture[0:1])
+
+        # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
         with mock.patch(
             "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
         ) as mock_postgresql_backend:
-            mock_postgresql_backend.return_value = MockPostgreSQLBackend(
-                query_results={
-                    GuacamoleEntity: [
-                        postgresql_model_guacamoleentity_USER_fixture,
-                        postgresql_model_guacamoleentity_USER_fixture,
-                    ],
-                    GuacamoleUser: [postgresql_model_guacamoleuser_fixture[0:1]],
-                }
-            )
+            mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.update_user_entities(ldap_model_users_fixture)
@@ -467,5 +491,35 @@ class TestPostgreSQLClient:
                 "There are 1 user entit(y|ies) currently registered",
                 "... 1 user entit(y|ies) will be added",
                 "There are 2 valid user entit(y|ies)",
+            ):
+                assert output_line in caplog.text
+
+    def test_update_users(
+        self,
+        caplog: Any,
+        ldap_model_users_fixture: list[LDAPUser],
+        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+    ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.add_all(postgresql_model_guacamoleentity_USER_fixture[0:1])
+        mock_backend.add_all([GuacamoleEntity(entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER)])
+
+        # Capture logs at debug level and above
+        caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = mock_backend
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.update_users(ldap_model_users_fixture)
+            for output_line in (
+                "Ensuring that 2 user(s) are registered",
+                "There are 2 user(s) currently registered",
+                "... 1 user(s) will be added",
+                "... 1 user(s) will be removed",
             ):
                 assert output_line in caplog.text
