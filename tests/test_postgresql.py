@@ -213,13 +213,13 @@ class TestPostgreSQLClient:
             client.assign_users_to_groups(
                 ldap_model_groups_fixture, ldap_model_users_fixture
             )
-            assert (
-                "Ensuring that 2 user(s) are correctly assigned among 3 group(s)"
-                in caplog.text
-            )
-            assert "Working on group 'defendants'" in caplog.text
-            assert "Working on group 'everyone'" in caplog.text
-            assert "Working on group 'plaintiffs'" in caplog.text
+            for output_line in (
+                "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
+                "Working on group 'defendants'",
+                "Working on group 'everyone'",
+                "Working on group 'plaintiffs'",
+            ):
+                assert output_line in caplog.text
 
     def test_assign_users_to_groups_missing_ldap_user(
         self,
@@ -433,6 +433,58 @@ class TestPostgreSQLClient:
                 PostgreSQLException, match="Unable to ensure PostgreSQL schema."
             ):
                 client.ensure_schema(SchemaVersion.v1_5_5)
+
+    def test_update(
+        self,
+        caplog: Any,
+        ldap_model_groups_fixture: list[LDAPGroup],
+        ldap_model_users_fixture: list[LDAPUser],
+    ) -> None:
+        # Create a mock backend
+        mock_backend = MockPostgreSQLBackend()  # type: ignore
+
+        # Capture logs at debug level and above
+        caplog.set_level(logging.DEBUG)
+
+        # Patch PostgreSQLBackend
+        with mock.patch(
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+        ) as mock_postgresql_backend:
+            mock_postgresql_backend.return_value = mock_backend
+
+            client = PostgreSQLClient(**self.client_kwargs)
+            client.update(
+                groups=ldap_model_groups_fixture, users=ldap_model_users_fixture
+            )
+            for output_line in (
+                "Ensuring that 3 group(s) are registered",
+                "There are 0 group(s) currently registered",
+                "... 3 group(s) will be added",
+                "... 0 group(s) will be removed",
+                "Ensuring that 2 user(s) are registered",
+                "There are 0 user(s) currently registered",
+                "... 2 user(s) will be added",
+                "... 0 user(s) will be removed",
+                "There are 0 user group entit(y|ies) currently registered",
+                "... 3 user group entit(y|ies) will be added",
+                "There are 3 valid user group entit(y|ies)",
+                "There are 0 user entit(y|ies) currently registered",
+                "... 0 user entit(y|ies) will be added",
+                "There are 2 valid user entit(y|ies)",
+                "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
+                "Working on group 'defendants'",
+                "-> entity_id: None; user_group_id: None",
+                "... group member 'LDAPUser(display_name='Numerius Negidius'",
+                "Working on group 'everyone'",
+                "-> entity_id: None; user_group_id: None",
+                "... group member 'LDAPUser(display_name='Aulus Agerius'",
+                "... group member 'LDAPUser(display_name='Numerius Negidius'",
+                "Working on group 'plaintiffs'",
+                "-> entity_id: None; user_group_id: None",
+                "... group member 'LDAPUser(display_name='Aulus Agerius'",
+                "... creating 4 user/group assignments.",
+            ):
+                assert output_line in caplog.text
 
     def test_update_group_entities(
         self,

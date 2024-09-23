@@ -58,6 +58,8 @@ class MockPostgreSQLBackend(Generic[T]):
             print(f"Executing {command}")
 
     def query(self, table: Type[T], **filter_kwargs: Any) -> Any:
+        if table not in self.contents:
+            self.contents[table] = []
         results = [item for item in self.contents[table]]
 
         if "entity_id" in filter_kwargs:
