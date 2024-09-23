@@ -5,6 +5,7 @@ from unittest import mock
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg
 from sqlalchemy.engine import URL, Engine  # type: ignore
 from sqlalchemy.pool.impl import QueuePool
+from sqlalchemy.sql.dml import Insert
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
@@ -16,34 +17,59 @@ from guacamole_user_sync.postgresql.orm import (
 )
 from guacamole_user_sync.postgresql.sql import SchemaVersion
 
-from .mocks import MockPostgreSQLBackend
+from .mocks import MockPostgreSQLBackend, MockPostgreSQLEngine
 
 
 class TestPostgreSQLBackend:
-    backend = PostgreSQLBackend(
-        database_name="database_name",
-        host_name="host_name",
-        port=1234,
-        user_name="user_name",
-        user_password="user_password",
-    )
+    def backend(self, *, engine: Any | None = None) -> PostgreSQLBackend:
+        backend = PostgreSQLBackend(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",
+        )
+        if engine:
+            backend._engine = engine
+        return backend
 
     def test_constructor(self) -> None:
-        assert isinstance(self.backend, PostgreSQLBackend)
-        assert self.backend.database_name == "database_name"
-        assert self.backend.host_name == "host_name"
-        assert self.backend.port == 1234
-        assert self.backend.user_name == "user_name"
-        assert self.backend.user_password == "user_password"
+        backend = self.backend()
+        assert isinstance(backend, PostgreSQLBackend)
+        assert backend.database_name == "database_name"
+        assert backend.host_name == "host_name"
+        assert backend.port == 1234
+        assert backend.user_name == "user_name"
+        assert backend.user_password == "user_password"
 
     def test_engine(self) -> None:
-        assert isinstance(self.backend.engine, Engine)
-        assert isinstance(self.backend.engine.pool, QueuePool)
-        assert isinstance(self.backend.engine.dialect, PGDialect_psycopg)
-        assert isinstance(self.backend.engine.url, URL)
-        assert self.backend.engine.logging_name is None
-        assert not self.backend.engine.echo
-        assert not self.backend.engine.hide_parameters  # type: ignore
+        backend = self.backend()
+        assert isinstance(backend.engine, Engine)
+        assert isinstance(backend.engine.pool, QueuePool)
+        assert isinstance(backend.engine.dialect, PGDialect_psycopg)
+        assert isinstance(backend.engine.url, URL)
+        assert backend.engine.logging_name is None
+        assert not backend.engine.echo
+        assert not backend.engine.hide_parameters  # type: ignore
+
+    def test_add_all(
+        self,
+        postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
+    ) -> None:
+        backend = self.backend(engine=MockPostgreSQLEngine())
+        backend.add_all(postgresql_model_guacamoleentity_fixture)
+
+        # Check method calls
+        backend.engine.connect_method.execute.assert_called()  # type: ignore
+        backend.engine.connect_method.close.assert_called_once()  # type: ignore
+
+        # Check method arguments
+        execute_args = (
+            backend.engine.connect_method.execute.call_args.args  # type: ignore
+        )
+        assert len(execute_args) == 2
+        assert isinstance(execute_args[0], Insert)
+        assert len(execute_args[1]) == len(postgresql_model_guacamoleentity_fixture)
 
 
 class TestPostgreSQLClient:
@@ -96,7 +122,7 @@ class TestPostgreSQLClient:
             assert "Working on group 'everyone'" in caplog.text
             assert "Working on group 'plaintiffs'" in caplog.text
 
-    def test_assign_users_to_groups_missing_users(
+    def test_assign_users_to_groups_missing_user(
         self,
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],

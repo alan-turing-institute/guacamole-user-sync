@@ -1,5 +1,7 @@
 from typing import Any, Generic, TypeVar
+from unittest import mock
 
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql.expression import TextClause
 
 from guacamole_user_sync.models import LDAPSearchResult
@@ -56,3 +58,12 @@ class MockPostgreSQLBackend(Generic[T]):
 
     def query(self, table: T, **filter_kwargs: Any) -> Any:
         return self.query_results[table].pop(0)
+
+
+class MockPostgreSQLEngine(mock.MagicMock):
+    connect_method = None
+
+    def connect(self) -> Connection:
+        if not self.connect_method:
+            self.connect_method = mock.MagicMock()
+        return self.connect_method

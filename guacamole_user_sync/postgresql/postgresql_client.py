@@ -93,6 +93,7 @@ class PostgreSQLClient:
                         f"... group member '{user}' has entity_id '{user_entity_id}'"
                     )
                 except IndexError:
+                    logger.debug(f"Could not find entity ID for user {user_uid}")
                     continue
                 # Create an entry in the user group member table
                 user_group_members.append(
