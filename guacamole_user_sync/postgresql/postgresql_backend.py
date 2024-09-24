@@ -23,7 +23,7 @@ class PostgreSQLBackend:
         user_name: str,
         user_password: str,
         session: Session | None = None,
-    ):
+    ) -> None:
         self.database_name = database_name
         self.host_name = host_name
         self.port = port
@@ -56,7 +56,7 @@ class PostgreSQLBackend:
             with session.begin():
                 session.add_all(items)
 
-    def delete(self, table: type[T], *filter_args: Any) -> None:
+    def delete(self, table: type[T], *filter_args: Any) -> None:  # noqa: ANN401
         with self.session() as session:  # type:ignore
             with session.begin():
                 if filter_args:
@@ -70,7 +70,7 @@ class PostgreSQLBackend:
                 for command in commands:
                     session.execute(command)
 
-    def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:
+    def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
         with self.session() as session:  # type:ignore
             with session.begin():
                 if filter_kwargs:

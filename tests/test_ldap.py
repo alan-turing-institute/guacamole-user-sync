@@ -28,7 +28,7 @@ class TestLDAPClient:
         client = LDAPClient(hostname="test-host")
         assert client.hostname == "test-host"
 
-    def test_connect(self, monkeypatch: Any) -> None:
+    def test_connect(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def mock_initialize(uri: str) -> MockLDAPObject:
             return MockLDAPObject(uri)
 
@@ -39,7 +39,7 @@ class TestLDAPClient:
         assert isinstance(cnxn, MockLDAPObject)
         assert cnxn.uri == "ldap://test-host"
 
-    def test_connect_with_bind(self, monkeypatch: Any) -> None:
+    def test_connect_with_bind(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def mock_initialize(uri: str) -> MockLDAPObject:
             return MockLDAPObject(uri)
 
@@ -53,7 +53,9 @@ class TestLDAPClient:
         assert cnxn.bind_dn == "bind-dn"
         assert cnxn.bind_password == "bind_password"
 
-    def test_connect_with_failed_bind(self, monkeypatch: Any, caplog: Any) -> None:
+    def test_connect_with_failed_bind(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
         def mock_initialize(uri: str) -> MockLDAPObject:
             return MockLDAPObject(uri)
 
@@ -66,8 +68,10 @@ class TestLDAPClient:
             client.connect()
         assert "Connection credentials were incorrect." in caplog.text
 
-    def test_search_exception_server_down(self, monkeypatch: Any, caplog: Any) -> None:
-        def mock_raise_server_down(*args: Any) -> None:
+    def test_search_exception_server_down(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def mock_raise_server_down(*args: Any) -> None:  # noqa: ANN401
             raise ldap.SERVER_DOWN
 
         monkeypatch.setattr(
@@ -79,9 +83,9 @@ class TestLDAPClient:
         assert "Server could not be reached." in caplog.text
 
     def test_search_exception_sizelimit_exceeded(
-        self, monkeypatch: Any, caplog: Any
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
-        def mock_raise_sizelimit_exceeded(*args: Any) -> None:
+        def mock_raise_sizelimit_exceeded(*args: Any) -> None:  # noqa: ANN401
             raise ldap.SIZELIMIT_EXCEEDED
 
         monkeypatch.setattr(
@@ -94,7 +98,7 @@ class TestLDAPClient:
 
     def test_search_failure_partial(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_response_groups_fixture: LDAPSearchResult,
     ) -> None:
         caplog.set_level(logging.DEBUG)
@@ -111,10 +115,10 @@ class TestLDAPClient:
 
     def test_search_no_results(
         self,
-        monkeypatch: Any,
-        caplog: Any,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        def mock_raise_no_results(*args: Any) -> None:
+        def mock_raise_no_results(*args: Any) -> None:  # noqa: ANN401
             raise ldap.NO_SUCH_OBJECT
 
         monkeypatch.setattr(ldap.asyncsearch.List, "startSearch", mock_raise_no_results)
@@ -125,7 +129,7 @@ class TestLDAPClient:
 
     def test_search_groups(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_query_groups_fixture: LDAPQuery,
         ldap_response_groups_fixture: LDAPSearchResult,
         ldap_model_groups_fixture: list[LDAPGroup],
@@ -146,7 +150,7 @@ class TestLDAPClient:
 
     def test_search_users(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_query_users_fixture: LDAPQuery,
         ldap_response_users_fixture: LDAPSearchResult,
         ldap_model_users_fixture: list[LDAPUser],

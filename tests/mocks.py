@@ -25,15 +25,19 @@ class MockAsyncSearchList:
     """Mock AsyncSearchList."""
 
     def __init__(
-        self, partial: bool, results: LDAPSearchResult, *args: Any, **kwargs: Any
+        self,
+        partial: bool,
+        results: LDAPSearchResult,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
         self.allResults = results
         self.partial = partial
 
-    def startSearch(self, *args: Any, **kwargs: Any) -> None:  # noqa: N802
+    def startSearch(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401, N802
         pass
 
-    def processResults(self, *args: Any, **kwargs: Any) -> bool:  # noqa: N802
+    def processResults(self, *args: Any, **kwargs: Any) -> bool:  # noqa: ANN401, N802
         return self.partial
 
 
@@ -57,7 +61,7 @@ T = TypeVar("T")
 class MockPostgreSQLBackend(Generic[T]):
     """Mock PostgreSQLBackend."""
 
-    def __init__(self, *data_lists: Any, **kwargs: Any) -> None:
+    def __init__(self, *data_lists: Any, **kwargs: Any) -> None:  # noqa: ANN401
         self.contents: dict[type[T], list[T]] = {}
         for data_list in data_lists:
             self.add_all(data_list)
@@ -68,14 +72,14 @@ class MockPostgreSQLBackend(Generic[T]):
             self.contents[cls] = []
         self.contents[cls] += items
 
-    def delete(self, *args: Any, **kwargs: Any) -> None:
+    def delete(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         pass
 
     def execute_commands(self, commands: list[TextClause]) -> None:
         for command in commands:
             print(f"Executing {command}")
 
-    def query(self, table: type[T], **filter_kwargs: Any) -> Any:
+    def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
         if table not in self.contents:
             self.contents[table] = []
         results = [item for item in self.contents[table]]

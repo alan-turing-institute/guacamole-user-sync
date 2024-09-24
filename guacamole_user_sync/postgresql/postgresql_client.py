@@ -34,7 +34,7 @@ class PostgreSQLClient:
         port: int,
         user_name: str,
         user_password: str,
-    ):
+    ) -> None:
         self.backend = PostgreSQLBackend(
             database_name=database_name,
             host_name=host_name,

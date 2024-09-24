@@ -10,6 +10,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool.impl import QueuePool
 from sqlalchemy.sql.elements import BinaryExpression
+from sqlalchemy.sql.expression import TextClause
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
@@ -192,7 +193,7 @@ class TestPostgreSQLClient:
 
     def test_assign_users_to_groups(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
@@ -227,7 +228,7 @@ class TestPostgreSQLClient:
 
     def test_assign_users_to_groups_missing_ldap_user(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
@@ -261,7 +262,7 @@ class TestPostgreSQLClient:
 
     def test_assign_users_to_groups_missing_user_entity(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
@@ -296,7 +297,7 @@ class TestPostgreSQLClient:
 
     def test_assign_users_to_groups_missing_usergroup(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
@@ -329,7 +330,7 @@ class TestPostgreSQLClient:
             ):
                 assert output_line in caplog.text
 
-    def test_ensure_schema(self, capsys: Any) -> None:
+    def test_ensure_schema(self, capsys: pytest.CaptureFixture) -> None:
         # Create a mock backend
         mock_backend = MockPostgreSQLBackend()  # type: ignore
 
@@ -418,9 +419,9 @@ class TestPostgreSQLClient:
                     f"Executing CREATE INDEX IF NOT EXISTS {index_name}" in captured.out
                 )
 
-    def test_ensure_schema_exception(self, capsys: Any) -> None:
+    def test_ensure_schema_exception(self, capsys: pytest.CaptureFixture) -> None:
         # Create a mock backend
-        def execute_commands_exception(commands: Any) -> None:
+        def execute_commands_exception(commands: list[TextClause]) -> None:
             raise OperationalError(statement="statement", params=None, orig=None)
 
         mock_backend = MockPostgreSQLBackend()  # type: ignore
@@ -440,7 +441,7 @@ class TestPostgreSQLClient:
 
     def test_update(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
     ) -> None:
@@ -492,7 +493,7 @@ class TestPostgreSQLClient:
 
     def test_update_group_entities(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
@@ -522,7 +523,7 @@ class TestPostgreSQLClient:
 
     def test_update_groups(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
     ) -> None:
@@ -556,7 +557,7 @@ class TestPostgreSQLClient:
 
     def test_update_user_entities(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
@@ -587,7 +588,7 @@ class TestPostgreSQLClient:
 
     def test_update_users(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
