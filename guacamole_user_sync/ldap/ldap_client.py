@@ -5,7 +5,7 @@ from ldap.asyncsearch import List as AsyncSearchList
 from ldap.ldapobject import LDAPObject
 
 from guacamole_user_sync.models import (
-    LDAPException,
+    LDAPError,
     LDAPGroup,
     LDAPQuery,
     LDAPSearchResult,
@@ -37,7 +37,7 @@ class LDAPClient:
                     self.cnxn.simple_bind_s(self.bind_dn, self.bind_password)
                 except ldap.INVALID_CREDENTIALS as exc:
                     logger.warning("Connection credentials were incorrect.")
-                    raise LDAPException from exc
+                    raise LDAPError from exc
         return self.cnxn
 
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
@@ -94,10 +94,10 @@ class LDAPClient:
             return results
         except ldap.NO_SUCH_OBJECT as exc:
             logger.warning("Server returned no results.")
-            raise LDAPException from exc
+            raise LDAPError from exc
         except ldap.SERVER_DOWN as exc:
             logger.warning("Server could not be reached.")
-            raise LDAPException from exc
+            raise LDAPError from exc
         except ldap.SIZELIMIT_EXCEEDED as exc:
             logger.warning("Server-side size limit exceeded.")
-            raise LDAPException from exc
+            raise LDAPError from exc

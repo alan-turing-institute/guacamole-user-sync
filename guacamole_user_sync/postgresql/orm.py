@@ -10,7 +10,7 @@ from sqlalchemy.orm import (  # type:ignore
 )
 
 
-class guacamole_entity_type(enum.Enum):
+class GuacamoleEntityType(enum.Enum):
     USER = "USER"
     USER_GROUP = "USER_GROUP"
 
@@ -24,7 +24,7 @@ class GuacamoleEntity(GuacamoleBase):
 
     entity_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128))
-    type: Mapped[guacamole_entity_type] = mapped_column(Enum(guacamole_entity_type))
+    type: Mapped[GuacamoleEntityType] = mapped_column(Enum(GuacamoleEntityType))
 
 
 class GuacamoleUser(GuacamoleBase):

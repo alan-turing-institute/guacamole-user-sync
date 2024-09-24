@@ -7,7 +7,7 @@ import pytest
 
 from guacamole_user_sync.ldap import LDAPClient
 from guacamole_user_sync.models import (
-    LDAPException,
+    LDAPError,
     LDAPGroup,
     LDAPQuery,
     LDAPSearchResult,
@@ -60,7 +60,7 @@ class TestLDAPClient:
         client = LDAPClient(
             hostname="test-host", bind_dn="bind-dn", bind_password="incorrect-password"
         )
-        with pytest.raises(LDAPException):
+        with pytest.raises(LDAPError):
             client.connect()
         assert "Connection credentials were incorrect." in caplog.text
 
@@ -72,7 +72,7 @@ class TestLDAPClient:
             ldap.asyncsearch.List, "startSearch", mock_raise_server_down
         )
         client = LDAPClient(hostname="test-host")
-        with pytest.raises(LDAPException):
+        with pytest.raises(LDAPError):
             client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
         assert "Server could not be reached." in caplog.text
 
@@ -86,7 +86,7 @@ class TestLDAPClient:
             ldap.asyncsearch.List, "startSearch", mock_raise_sizelimit_exceeded
         )
         client = LDAPClient(hostname="test-host")
-        with pytest.raises(LDAPException):
+        with pytest.raises(LDAPError):
             client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
         assert "Server-side size limit exceeded." in caplog.text
 
@@ -117,7 +117,7 @@ class TestLDAPClient:
 
         monkeypatch.setattr(ldap.asyncsearch.List, "startSearch", mock_raise_no_results)
         client = LDAPClient(hostname="test-host")
-        with pytest.raises(LDAPException):
+        with pytest.raises(LDAPError):
             client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
         assert "Server returned no results." in caplog.text
 

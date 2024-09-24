@@ -5,9 +5,9 @@ import pytest
 from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPSearchResult, LDAPUser
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
+    GuacamoleEntityType,
     GuacamoleUser,
     GuacamoleUserGroup,
-    guacamole_entity_type,
 )
 
 
@@ -138,42 +138,42 @@ def ldap_response_users_fixture() -> LDAPSearchResult:
 
 
 @pytest.fixture
-def postgresql_model_guacamoleentity_USER_GROUP_fixture() -> list[GuacamoleEntity]:
+def postgresql_model_guacamoleentity_user_group_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
-            entity_id=1, name="defendants", type=guacamole_entity_type.USER_GROUP
+            entity_id=1, name="defendants", type=GuacamoleEntityType.USER_GROUP
         ),
         GuacamoleEntity(
-            entity_id=2, name="everyone", type=guacamole_entity_type.USER_GROUP
+            entity_id=2, name="everyone", type=GuacamoleEntityType.USER_GROUP
         ),
         GuacamoleEntity(
-            entity_id=3, name="plaintiffs", type=guacamole_entity_type.USER_GROUP
+            entity_id=3, name="plaintiffs", type=GuacamoleEntityType.USER_GROUP
         ),
     ]
 
 
 @pytest.fixture
-def postgresql_model_guacamoleentity_USER_fixture() -> list[GuacamoleEntity]:
+def postgresql_model_guacamoleentity_user_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
-            entity_id=4, name="aulus.agerius@rome.la", type=guacamole_entity_type.USER
+            entity_id=4, name="aulus.agerius@rome.la", type=GuacamoleEntityType.USER
         ),
         GuacamoleEntity(
             entity_id=5,
             name="numerius.negidius@rome.la",
-            type=guacamole_entity_type.USER,
+            type=GuacamoleEntityType.USER,
         ),
     ]
 
 
 @pytest.fixture
 def postgresql_model_guacamoleentity_fixture(
-    postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
-    postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+    postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+    postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
 ) -> list[GuacamoleEntity]:
     return (
-        postgresql_model_guacamoleentity_USER_GROUP_fixture
-        + postgresql_model_guacamoleentity_USER_fixture
+        postgresql_model_guacamoleentity_user_group_fixture
+        + postgresql_model_guacamoleentity_user_fixture
     )
 
 

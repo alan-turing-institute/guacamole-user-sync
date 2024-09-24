@@ -101,9 +101,11 @@ ignore_missing_imports = true
 
 [tool.ruff.lint]
 select = [
-    # See https://beta.ruff.rs/docs/rules/
+    "A",   # flake8-builtins
+    "C90", # McCabe complexity
     "E",   # pycodestyle errors
     "F",   # pyflakes
     "I",   # isort
+    "N",   # pep8-naming
     "W",   # pycodestyle warnings
 ]

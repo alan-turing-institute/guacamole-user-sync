@@ -11,13 +11,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool.impl import QueuePool
 from sqlalchemy.sql.elements import BinaryExpression
 
-from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLException
+from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
+    GuacamoleEntityType,
     GuacamoleUser,
     GuacamoleUserGroup,
-    guacamole_entity_type,
 )
 from guacamole_user_sync.postgresql.sql import SchemaVersion
 
@@ -106,7 +106,7 @@ class TestPostgreSQLBackend:
     ) -> None:
         backend, session = self.mock_backend()
         backend.delete(
-            GuacamoleEntity, GuacamoleEntity.type == guacamole_entity_type.USER
+            GuacamoleEntity, GuacamoleEntity.type == GuacamoleEntityType.USER
         )
 
         # Check method calls
@@ -154,7 +154,7 @@ class TestPostgreSQLBackend:
         self,
     ) -> None:
         backend, session = self.mock_backend()
-        backend.query(GuacamoleEntity, type=guacamole_entity_type.USER)
+        backend.query(GuacamoleEntity, type=GuacamoleEntityType.USER)
 
         # Check method calls
         print(session.mock_calls)
@@ -169,7 +169,7 @@ class TestPostgreSQLBackend:
         filter_by_kwargs = session.filter_by.call_args.kwargs
         assert len(filter_by_kwargs) == 1
         assert "type" in filter_by_kwargs
-        assert filter_by_kwargs["type"] == guacamole_entity_type.USER
+        assert filter_by_kwargs["type"] == GuacamoleEntityType.USER
 
 
 class TestPostgreSQLClient:
@@ -260,14 +260,14 @@ class TestPostgreSQLClient:
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
         mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_fixture[1:],
-            postgresql_model_guacamoleentity_USER_GROUP_fixture,
+            postgresql_model_guacamoleentity_user_fixture[1:],
+            postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleusergroup_fixture,
         )
 
@@ -430,7 +430,7 @@ class TestPostgreSQLClient:
 
             client = PostgreSQLClient(**self.client_kwargs)
             with pytest.raises(
-                PostgreSQLException, match="Unable to ensure PostgreSQL schema."
+                PostgreSQLError, match="Unable to ensure PostgreSQL schema."
             ):
                 client.ensure_schema(SchemaVersion.v1_5_5)
 
@@ -489,12 +489,12 @@ class TestPostgreSQLClient:
     def test_update_group_entities(
         self,
         caplog: Any,
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
         mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_GROUP_fixture,
+            postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleusergroup_fixture[0:1],
         )
 
@@ -520,16 +520,16 @@ class TestPostgreSQLClient:
         self,
         caplog: Any,
         ldap_model_groups_fixture: list[LDAPGroup],
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
         mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1],
+            postgresql_model_guacamoleentity_user_group_fixture[0:1],
             [
                 GuacamoleEntity(
                     entity_id=99,
                     name="to-be-deleted",
-                    type=guacamole_entity_type.USER_GROUP,
+                    type=GuacamoleEntityType.USER_GROUP,
                 )
             ],
         )
@@ -555,11 +555,11 @@ class TestPostgreSQLClient:
         caplog: Any,
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
         mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_fixture,
+            postgresql_model_guacamoleentity_user_fixture,
             postgresql_model_guacamoleuser_fixture[0:1],
         )
 
@@ -585,14 +585,14 @@ class TestPostgreSQLClient:
         self,
         caplog: Any,
         ldap_model_users_fixture: list[LDAPUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
         mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_fixture[0:1],
+            postgresql_model_guacamoleentity_user_fixture[0:1],
             [
                 GuacamoleEntity(
-                    entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER
+                    entity_id=99, name="to-be-deleted", type=GuacamoleEntityType.USER
                 )
             ],
         )

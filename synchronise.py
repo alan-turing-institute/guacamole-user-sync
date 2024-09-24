@@ -4,7 +4,7 @@ import os
 import time
 
 from guacamole_user_sync.ldap import LDAPClient
-from guacamole_user_sync.models import LDAPException, LDAPQuery, PostgreSQLException
+from guacamole_user_sync.models import LDAPError, LDAPQuery, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
 
@@ -76,14 +76,14 @@ def synchronise(
     try:
         ldap_groups = ldap_client.search_groups(ldap_group_query)
         ldap_users = ldap_client.search_users(ldap_user_query)
-    except LDAPException:
+    except LDAPError:
         logger.warning("LDAP server query failed")
         return
 
     try:
         postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
         postgresql_client.update(groups=ldap_groups, users=ldap_users)
-    except PostgreSQLException:
+    except PostgreSQLError:
         logger.warning("PostgreSQL update failed")
         return
 

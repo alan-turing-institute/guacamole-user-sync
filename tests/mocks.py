@@ -26,10 +26,10 @@ class MockAsyncSearchList:
         self.allResults = results
         self.partial = partial
 
-    def startSearch(self, *args: Any, **kwargs: Any) -> None:
+    def startSearch(self, *args: Any, **kwargs: Any) -> None:  # noqa: N802
         pass
 
-    def processResults(self, *args: Any, **kwargs: Any) -> bool:
+    def processResults(self, *args: Any, **kwargs: Any) -> bool:  # noqa: N802
         return self.partial
 
 
