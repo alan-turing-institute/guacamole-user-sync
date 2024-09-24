@@ -23,7 +23,7 @@ class GuacamoleSchema:
         logger.info(f"Ensuring correct schema for Guacamole {schema_version.value}")
         commands = []
         sql_file_path = Path(__file__).with_name(
-            f"guacamole_schema.{schema_version.value}.sql"
+            f"guacamole_schema.{schema_version.value}.sql",
         )
         with open(sql_file_path) as f_sql:
             statements = sqlparse.split(f_sql.read())
@@ -40,6 +40,6 @@ class GuacamoleSchema:
                 logger.debug(f"... {first_comment}")
             # Extract the command
             commands.append(
-                text(sqlparse.format(statement, strip_comments=True, compact=True))
+                text(sqlparse.format(statement, strip_comments=True, compact=True)),
             )
         return commands

@@ -141,13 +141,19 @@ def ldap_response_users_fixture() -> LDAPSearchResult:
 def postgresql_model_guacamoleentity_user_group_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
-            entity_id=1, name="defendants", type=GuacamoleEntityType.USER_GROUP
+            entity_id=1,
+            name="defendants",
+            type=GuacamoleEntityType.USER_GROUP,
         ),
         GuacamoleEntity(
-            entity_id=2, name="everyone", type=GuacamoleEntityType.USER_GROUP
+            entity_id=2,
+            name="everyone",
+            type=GuacamoleEntityType.USER_GROUP,
         ),
         GuacamoleEntity(
-            entity_id=3, name="plaintiffs", type=GuacamoleEntityType.USER_GROUP
+            entity_id=3,
+            name="plaintiffs",
+            type=GuacamoleEntityType.USER_GROUP,
         ),
     ]
 
@@ -156,7 +162,9 @@ def postgresql_model_guacamoleentity_user_group_fixture() -> list[GuacamoleEntit
 def postgresql_model_guacamoleentity_user_fixture() -> list[GuacamoleEntity]:
     return [
         GuacamoleEntity(
-            entity_id=4, name="aulus.agerius@rome.la", type=GuacamoleEntityType.USER
+            entity_id=4,
+            name="aulus.agerius@rome.la",
+            type=GuacamoleEntityType.USER,
         ),
         GuacamoleEntity(
             entity_id=5,

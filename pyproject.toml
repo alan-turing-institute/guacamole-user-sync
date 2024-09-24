@@ -105,6 +105,7 @@ select = [
     "ANN", # flake8-annotations
     "B",   # flake8-bugbear
     "C90", # McCabe complexity
+    "COM", # flake8-commas
     "D",   # pydocstyle
     "E",   # pycodestyle errors
     "F",   # pyflakes

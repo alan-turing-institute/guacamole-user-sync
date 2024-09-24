@@ -56,7 +56,9 @@ class TestLDAPClient:
         assert cnxn.bind_password == "bind_password"  # noqa: S105
 
     def test_connect_with_failed_bind(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         def mock_initialize(uri: str) -> MockLDAPObject:
             return MockLDAPObject(uri)
@@ -73,13 +75,17 @@ class TestLDAPClient:
         assert "Connection credentials were incorrect." in caplog.text
 
     def test_search_exception_server_down(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         def mock_raise_server_down(*args: Any) -> None:  # noqa: ANN401
             raise ldap.SERVER_DOWN
 
         monkeypatch.setattr(
-            ldap.asyncsearch.List, "startSearch", mock_raise_server_down
+            ldap.asyncsearch.List,
+            "startSearch",
+            mock_raise_server_down,
         )
         client = LDAPClient(hostname="test-host")
         with pytest.raises(LDAPError):
@@ -87,13 +93,17 @@ class TestLDAPClient:
         assert "Server could not be reached." in caplog.text
 
     def test_search_exception_sizelimit_exceeded(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         def mock_raise_sizelimit_exceeded(*args: Any) -> None:  # noqa: ANN401
             raise ldap.SIZELIMIT_EXCEEDED
 
         monkeypatch.setattr(
-            ldap.asyncsearch.List, "startSearch", mock_raise_sizelimit_exceeded
+            ldap.asyncsearch.List,
+            "startSearch",
+            mock_raise_sizelimit_exceeded,
         )
         client = LDAPClient(hostname="test-host")
         with pytest.raises(LDAPError):
@@ -107,10 +117,10 @@ class TestLDAPClient:
     ) -> None:
         caplog.set_level(logging.DEBUG)
         with mock.patch(
-            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList"
+            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList",
         ) as mock_async_search_list:
             mock_async_search_list.return_value = MockAsyncSearchListPartialResults(
-                results=ldap_response_groups_fixture[0:1]
+                results=ldap_response_groups_fixture[0:1],
             )
             client = LDAPClient(hostname="test-host")
             client.search(query=LDAPQuery(base_dn="", filter="", id_attr=""))
@@ -140,10 +150,10 @@ class TestLDAPClient:
     ) -> None:
         caplog.set_level(logging.DEBUG)
         with mock.patch(
-            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList"
+            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList",
         ) as mock_async_search_list:
             mock_async_search_list.return_value = MockAsyncSearchListFullResults(
-                results=ldap_response_groups_fixture
+                results=ldap_response_groups_fixture,
             )
             client = LDAPClient(hostname="test-host")
             users = client.search_groups(query=ldap_query_groups_fixture)
@@ -161,10 +171,10 @@ class TestLDAPClient:
     ) -> None:
         caplog.set_level(logging.DEBUG)
         with mock.patch(
-            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList"
+            "guacamole_user_sync.ldap.ldap_client.AsyncSearchList",
         ) as mock_async_search_list:
             mock_async_search_list.return_value = MockAsyncSearchListFullResults(
-                results=ldap_response_users_fixture
+                results=ldap_response_users_fixture,
             )
             client = LDAPClient(hostname="test-host")
             users = client.search_users(query=ldap_query_users_fixture)

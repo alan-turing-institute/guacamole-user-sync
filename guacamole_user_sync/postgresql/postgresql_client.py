@@ -44,11 +44,13 @@ class PostgreSQLClient:
         )
 
     def assign_users_to_groups(
-        self, groups: list[LDAPGroup], users: list[LDAPUser]
+        self,
+        groups: list[LDAPGroup],
+        users: list[LDAPUser],
     ) -> None:
         logger.info(
             f"Ensuring that {len(users)} user(s)"
-            f" are correctly assigned among {len(groups)} group(s)"
+            f" are correctly assigned among {len(groups)} group(s)",
         )
         user_group_members = []
         for group in groups:
@@ -71,11 +73,11 @@ class PostgreSQLClient:
                     )
                 ][0]
                 logger.debug(
-                    f"-> entity_id: {group_entity_id}; user_group_id: {user_group_id}"
+                    f"-> entity_id: {group_entity_id}; user_group_id: {user_group_id}",
                 )
             except IndexError:
                 logger.debug(
-                    f"Could not determine user_group_id for group '{group.name}'."
+                    f"Could not determine user_group_id for group '{group.name}'.",
                 )
                 continue
             # Get the user_entity_id for each user belonging to this group
@@ -95,7 +97,7 @@ class PostgreSQLClient:
                         )
                     ][0]
                     logger.debug(
-                        f"... group member '{user}' has entity_id '{user_entity_id}'"
+                        f"... group member '{user}' has entity_id '{user_entity_id}'",
                     )
                 except IndexError:
                     logger.debug(f"Could not find entity ID for LDAP user {user_uid}")
@@ -105,7 +107,7 @@ class PostgreSQLClient:
                     GuacamoleUserGroupMember(
                         user_group_id=user_group_id,
                         member_entity_id=user_entity_id,
-                    )
+                    ),
                 )
         # Clear existing assignments then reassign
         logger.debug(f"... creating {len(user_group_members)} user/group assignments.")
@@ -135,12 +137,13 @@ class PostgreSQLClient:
         current_group_names = [
             item.name
             for item in self.backend.query(
-                GuacamoleEntity, type=GuacamoleEntityType.USER_GROUP
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER_GROUP,
             )
         ]
         # Add groups
         logger.debug(
-            f"There are {len(current_group_names)} group(s) currently registered"
+            f"There are {len(current_group_names)} group(s) currently registered",
         )
         group_names_to_add = [
             group_name
@@ -152,7 +155,7 @@ class PostgreSQLClient:
             [
                 GuacamoleEntity(name=group_name, type=GuacamoleEntityType.USER_GROUP)
                 for group_name in group_names_to_add
-            ]
+            ],
         )
         # Remove groups
         group_names_to_remove = [
@@ -175,17 +178,18 @@ class PostgreSQLClient:
         ]
         logger.debug(
             f"There are {len(current_user_group_entity_ids)}"
-            " user group entit(y|ies) currently registered"
+            " user group entit(y|ies) currently registered",
         )
         new_group_entity_ids = [
             group.entity_id
             for group in self.backend.query(
-                GuacamoleEntity, type=GuacamoleEntityType.USER_GROUP
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER_GROUP,
             )
             if group.entity_id not in current_user_group_entity_ids
         ]
         logger.debug(
-            f"... {len(new_group_entity_ids)} user group entit(y|ies) will be added"
+            f"... {len(new_group_entity_ids)} user group entit(y|ies) will be added",
         )
         self.backend.add_all(
             [
@@ -193,18 +197,20 @@ class PostgreSQLClient:
                     entity_id=group_entity_id,
                 )
                 for group_entity_id in new_group_entity_ids
-            ]
+            ],
         )
         # Clean up any unused entries
         valid_entity_ids = [
             group.entity_id
             for group in self.backend.query(
-                GuacamoleEntity, type=GuacamoleEntityType.USER_GROUP
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER_GROUP,
             )
         ]
         logger.debug(f"There are {len(valid_entity_ids)} valid user group entit(y|ies)")
         self.backend.delete(
-            GuacamoleUserGroup, GuacamoleUserGroup.entity_id.not_in(valid_entity_ids)
+            GuacamoleUserGroup,
+            GuacamoleUserGroup.entity_id.not_in(valid_entity_ids),
         )
 
     def update_users(self, users: list[LDAPUser]) -> None:
@@ -215,7 +221,8 @@ class PostgreSQLClient:
         current_usernames = [
             user.name
             for user in self.backend.query(
-                GuacamoleEntity, type=GuacamoleEntityType.USER
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER,
             )
         ]
         # Add users
@@ -230,7 +237,7 @@ class PostgreSQLClient:
             [
                 GuacamoleEntity(name=username, type=GuacamoleEntityType.USER)
                 for username in usernames_to_add
-            ]
+            ],
         )
         # Remove users
         usernames_to_remove = [
@@ -253,17 +260,18 @@ class PostgreSQLClient:
         ]
         logger.debug(
             f"There are {len(current_user_entity_ids)} "
-            "user entit(y|ies) currently registered"
+            "user entit(y|ies) currently registered",
         )
         new_user_tuples: list[tuple[int, LDAPUser]] = [
             (user.entity_id, [u for u in users if u.name == user.name][0])
             for user in self.backend.query(
-                GuacamoleEntity, type=GuacamoleEntityType.USER
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER,
             )
             if user.entity_id not in current_user_entity_ids
         ]
         logger.debug(
-            f"... {len(current_user_entity_ids)} user entit(y|ies) will be added"
+            f"... {len(current_user_entity_ids)} user entit(y|ies) will be added",
         )
         self.backend.add_all(
             [
@@ -275,16 +283,18 @@ class PostgreSQLClient:
                     password_salt=secrets.token_bytes(32),
                 )
                 for user_tuple in new_user_tuples
-            ]
+            ],
         )
         # Clean up any unused entries
         valid_entity_ids = [
             user.entity_id
             for user in self.backend.query(
-                GuacamoleEntity, type=GuacamoleEntityType.USER
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER,
             )
         ]
         logger.debug(f"There are {len(valid_entity_ids)} valid user entit(y|ies)")
         self.backend.delete(
-            GuacamoleUser, GuacamoleUser.entity_id.not_in(valid_entity_ids)
+            GuacamoleUser,
+            GuacamoleUser.entity_id.not_in(valid_entity_ids),
         )

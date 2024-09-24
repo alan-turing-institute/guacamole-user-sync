@@ -105,7 +105,8 @@ class TestPostgreSQLBackend:
         session = self.mock_session()
         backend = self.mock_backend(session=session)
         backend.delete(
-            GuacamoleEntity, GuacamoleEntity.type == GuacamoleEntityType.USER
+            GuacamoleEntity,
+            GuacamoleEntity.type == GuacamoleEntityType.USER,
         )
 
         # Check method calls
@@ -200,13 +201,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture,
             )
             for output_line in (
                 "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
@@ -235,13 +237,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture[0:1]
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture[0:1],
             )
             for output_line in (
                 "Ensuring that 1 user(s) are correctly assigned among 3 group(s)",
@@ -271,13 +274,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture,
             )
 
             for output_line in (
@@ -304,13 +308,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture,
             )
 
             for output_line in (
@@ -326,7 +331,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -419,13 +424,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             with pytest.raises(
-                PostgreSQLError, match="Unable to ensure PostgreSQL schema."
+                PostgreSQLError,
+                match="Unable to ensure PostgreSQL schema.",
             ):
                 client.ensure_schema(SchemaVersion.v1_5_5)
 
@@ -443,13 +449,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.update(
-                groups=ldap_model_groups_fixture, users=ldap_model_users_fixture
+                groups=ldap_model_groups_fixture,
+                users=ldap_model_users_fixture,
             )
             for output_line in (
                 "Ensuring that 3 group(s) are registered",
@@ -498,7 +505,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -525,7 +532,7 @@ class TestPostgreSQLClient:
                     entity_id=99,
                     name="to-be-deleted",
                     type=GuacamoleEntityType.USER_GROUP,
-                )
+                ),
             ],
         )
 
@@ -534,7 +541,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -563,7 +570,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -587,8 +594,10 @@ class TestPostgreSQLClient:
             postgresql_model_guacamoleentity_user_fixture[0:1],
             [
                 GuacamoleEntity(
-                    entity_id=99, name="to-be-deleted", type=GuacamoleEntityType.USER
-                )
+                    entity_id=99,
+                    name="to-be-deleted",
+                    type=GuacamoleEntityType.USER,
+                ),
             ],
         )
 
@@ -597,7 +606,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 

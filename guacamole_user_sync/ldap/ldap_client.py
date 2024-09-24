@@ -55,7 +55,7 @@ class LDAPClient:
                         group.decode("utf-8") for group in attr_dict["memberUid"]
                     ],
                     name=attr_dict[query.id_attr][0].decode("utf-8"),
-                )
+                ),
             )
         logger.debug(f"Loaded {len(output)} LDAP groups")
         return output
@@ -72,7 +72,7 @@ class LDAPClient:
                     ],
                     name=attr_dict[query.id_attr][0].decode("utf-8"),
                     uid=attr_dict["uid"][0].decode("utf-8"),
-                )
+                ),
             )
         logger.debug(f"Loaded {len(output)} LDAP users")
         return output
