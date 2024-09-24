@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import UTC, datetime
 
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import SQLAlchemyError
 
 from guacamole_user_sync.models import (
     LDAPGroup,
@@ -117,9 +117,9 @@ class PostgreSQLClient:
     def ensure_schema(self, schema_version: SchemaVersion) -> None:
         try:
             self.backend.execute_commands(GuacamoleSchema.commands(schema_version))
-        except OperationalError as exc:
-            logger.warning("Unable to connect to the PostgreSQL server.")
-            raise PostgreSQLError("Unable to ensure PostgreSQL schema.") from exc
+        except SQLAlchemyError as exc:
+            msg = "Unable to ensure PostgreSQL schema."
+            raise PostgreSQLError(msg) from exc
 
     def update(self, *, groups: list[LDAPGroup], users: list[LDAPUser]) -> None:
         """Update the relevant tables to match lists of LDAP users and groups."""

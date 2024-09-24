@@ -90,23 +90,31 @@ def synchronise(
 
 if __name__ == "__main__":
     if not (ldap_host := os.getenv("LDAP_HOST", None)):
-        raise ValueError("LDAP_HOST is not defined")
+        msg = "LDAP_HOST is not defined"
+        raise ValueError(msg)
     if not (ldap_group_base_dn := os.getenv("LDAP_GROUP_BASE_DN", None)):
-        raise ValueError("LDAP_GROUP_BASE_DN is not defined")
+        msg = "LDAP_GROUP_BASE_DN is not defined"
+        raise ValueError(msg)
     if not (ldap_group_filter := os.getenv("LDAP_GROUP_FILTER", None)):
-        raise ValueError("LDAP_GROUP_FILTER is not defined")
+        msg = "LDAP_GROUP_FILTER is not defined"
+        raise ValueError(msg)
 
     if not (ldap_user_base_dn := os.getenv("LDAP_USER_BASE_DN", None)):
-        raise ValueError("LDAP_USER_BASE_DN is not defined")
+        msg = "LDAP_USER_BASE_DN is not defined"
+        raise ValueError(msg)
     if not (ldap_user_filter := os.getenv("LDAP_USER_FILTER", None)):
-        raise ValueError("LDAP_USER_FILTER is not defined")
+        msg = "LDAP_USER_FILTER is not defined"
+        raise ValueError(msg)
 
     if not (postgresql_host_name := os.getenv("POSTGRESQL_HOST", None)):
-        raise ValueError("POSTGRESQL_HOST is not defined")
+        msg = "POSTGRESQL_HOST is not defined"
+        raise ValueError(msg)
     if not (postgresql_password := os.getenv("POSTGRESQL_PASSWORD", None)):
-        raise ValueError("POSTGRESQL_PASSWORD is not defined")
+        msg = "POSTGRESQL_PASSWORD is not defined"
+        raise ValueError(msg)
     if not (postgresql_user_name := os.getenv("POSTGRESQL_USERNAME", None)):
-        raise ValueError("POSTGRESQL_USERNAME is not defined")
+        msg = "POSTGRESQL_USERNAME is not defined"
+        raise ValueError(msg)
 
     logging.basicConfig(
         level=(

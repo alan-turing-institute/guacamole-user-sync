@@ -3,6 +3,7 @@ from typing import Any, TypeVar
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL, Engine  # type:ignore
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import TextClause
 
@@ -65,10 +66,14 @@ class PostgreSQLBackend:
                     session.query(table).delete()
 
     def execute_commands(self, commands: list[TextClause]) -> None:
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                for command in commands:
-                    session.execute(command)
+        try:
+            with self.session() as session:  # type:ignore
+                with session.begin():
+                    for command in commands:
+                        session.execute(command)
+        except SQLAlchemyError:
+            logger.warning("Unable to execute PostgreSQL commands.")
+            raise
 
     def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
         with self.session() as session:  # type:ignore

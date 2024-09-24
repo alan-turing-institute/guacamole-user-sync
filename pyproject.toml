@@ -110,6 +110,7 @@ select = [
     "D",   # pydocstyle
     "DTZ", # flake8-datetimez
     "E",   # pycodestyle errors
+    "EM",  # flake8-errmsg
     "F",   # pyflakes
     "FBT", # flake8-boolean-trap
     "I",   # isort

@@ -130,6 +130,22 @@ class TestPostgreSQLBackend:
         backend.execute_commands([command])
         session.execute.assert_called_once_with(command)
 
+    def test_execute_commands_exception(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        command = text("SELECT * FROM guacamole_entity;")
+        session = self.mock_session()
+        session.execute.side_effect = OperationalError(
+            statement="exception reason",
+            params=None,
+            orig=None,
+        )
+        backend = self.mock_backend(session=session)
+        with pytest.raises(OperationalError, match="SQL: exception reason"):
+            backend.execute_commands([command])
+        assert "Unable to execute PostgreSQL commands." in caplog.text
+
     def test_query(self) -> None:
         session = self.mock_session()
         backend = self.mock_backend(session=session)
