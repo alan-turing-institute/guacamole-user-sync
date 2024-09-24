@@ -9,6 +9,8 @@ from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
 
 def main(
+    ldap_bind_dn: str | None,
+    ldap_bind_password: str | None,
     ldap_group_base_dn: str,
     ldap_group_filter: str,
     ldap_group_name_attr: str,
@@ -25,7 +27,11 @@ def main(
     repeat_interval: int,
 ) -> None:
     # Initialise LDAP resources
-    ldap_client = LDAPClient(f"{ldap_host}:{ldap_port}")
+    ldap_client = LDAPClient(
+        f"{ldap_host}:{ldap_port}",
+        bind_dn=ldap_bind_dn,
+        bind_password=ldap_bind_password,
+    )
     ldap_group_query = LDAPQuery(
         base_dn=ldap_group_base_dn,
         filter=ldap_group_filter,
@@ -114,6 +120,8 @@ if __name__ == "__main__":
     logger = logging.getLogger("guacamole_user_sync")
 
     main(
+        ldap_bind_dn=os.getenv("LDAP_BIND_DN", None),
+        ldap_bind_password=os.getenv("LDAP_BIND_PASSWORD", None),
         ldap_group_base_dn=ldap_group_base_dn,
         ldap_group_filter=ldap_group_filter,
         ldap_group_name_attr=os.getenv("LDAP_GROUP_NAME_ATTR", "cn"),
@@ -127,5 +135,5 @@ if __name__ == "__main__":
         postgresql_password=postgresql_password,
         postgresql_port=int(os.getenv("POSTGRESQL_PORT", 5432)),
         postgresql_user_name=postgresql_user_name,
-        repeat_interval=int(os.getenv("REPEAT_INTERVAL", 10)),
+        repeat_interval=int(os.getenv("REPEAT_INTERVAL", 300)),
     )

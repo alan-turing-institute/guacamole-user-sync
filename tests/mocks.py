@@ -1,5 +1,6 @@
 from typing import Any, Generic, Type, TypeVar
 
+import ldap
 from sqlalchemy.sql.expression import TextClause
 
 from guacamole_user_sync.models import LDAPSearchResult
@@ -8,6 +9,14 @@ from guacamole_user_sync.models import LDAPSearchResult
 class MockLDAPObject:
     def __init__(self, uri: str) -> None:
         self.uri = uri
+        self.bind_dn = ""
+        self.bind_password = ""
+
+    def simple_bind_s(self, bind_dn: str, bind_password: str) -> None:
+        if bind_password == "incorrect-password":
+            raise ldap.INVALID_CREDENTIALS
+        self.bind_dn = bind_dn
+        self.bind_password = bind_password
 
 
 class MockAsyncSearchList:

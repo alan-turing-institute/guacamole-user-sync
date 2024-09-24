@@ -16,16 +16,29 @@ logger = logging.getLogger("guacamole_user_sync")
 
 
 class LDAPClient:
-    def __init__(self, hostname: str) -> None:
+    def __init__(
+        self,
+        hostname: str,
+        *,
+        bind_dn: str | None = None,
+        bind_password: str | None = None,
+    ) -> None:
+        self.cnxn: LDAPObject | None = None
+        self.bind_dn = bind_dn
+        self.bind_password = bind_password
         self.hostname = hostname
-        self._host = None
 
-    @property
-    def host(self) -> LDAPObject:
-        if not self._host:
+    def connect(self) -> LDAPObject:
+        if not self.cnxn:
             logger.info(f"Initialising connection to LDAP host at {self.hostname}")
-            self._host = ldap.initialize(f"ldap://{self.hostname}")
-        return self._host
+            self.cnxn = ldap.initialize(f"ldap://{self.hostname}")
+            if self.bind_dn:
+                try:
+                    self.cnxn.simple_bind_s(self.bind_dn, self.bind_password)
+                except ldap.INVALID_CREDENTIALS as exc:
+                    logger.warning("Connection credentials were incorrect.")
+                    raise LDAPException from exc
+        return self.cnxn
 
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
         output = []
@@ -67,23 +80,24 @@ class LDAPClient:
         logger.info("Querying LDAP host with:")
         logger.info(f"... base DN: {query.base_dn}")
         logger.info(f"... filter: {query.filter}")
-        searcher = AsyncSearchList(self.host)
+        searcher = AsyncSearchList(self.connect())
         try:
             searcher.startSearch(
                 query.base_dn,
                 ldap.SCOPE_SUBTREE,
                 query.filter,
             )
-            partial = searcher.processResults()
-            if partial:
+            if searcher.processResults() != 0:
                 logger.warning("Only partial results received.")
+            results = searcher.allResults
+            logger.debug(f"Server returned {len(results)} results.")
+            return results
+        except ldap.NO_SUCH_OBJECT as exc:
+            logger.warning("Server returned no results.")
+            raise LDAPException from exc
         except ldap.SERVER_DOWN as exc:
             logger.warning("Server could not be reached.")
             raise LDAPException from exc
         except ldap.SIZELIMIT_EXCEEDED as exc:
             logger.warning("Server-side size limit exceeded.")
             raise LDAPException from exc
-
-        results = searcher.allResults
-        logger.debug(f"Server returned {len(results)} results.")
-        return results
