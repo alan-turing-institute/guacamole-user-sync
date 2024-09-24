@@ -82,7 +82,7 @@ class MockPostgreSQLBackend(Generic[T]):
     def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
         if table not in self.contents:
             self.contents[table] = []
-        results = [item for item in self.contents[table]]
+        results = list(self.contents[table])
 
         if "entity_id" in filter_kwargs:
             results = [

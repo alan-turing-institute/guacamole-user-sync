@@ -77,4 +77,4 @@ class PostgreSQLBackend:
                     result = session.query(table).filter_by(**filter_kwargs)
                 else:
                     result = session.query(table)
-        return [item for item in result]
+        return list(result)
