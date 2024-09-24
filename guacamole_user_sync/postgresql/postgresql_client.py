@@ -24,6 +24,8 @@ logger = logging.getLogger("guacamole_user_sync")
 
 
 class PostgreSQLClient:
+    """Client for connecting to a PostgreSQL database."""
+
     def __init__(
         self,
         *,
@@ -118,7 +120,7 @@ class PostgreSQLClient:
             raise PostgreSQLError("Unable to ensure PostgreSQL schema.") from exc
 
     def update(self, *, groups: list[LDAPGroup], users: list[LDAPUser]) -> None:
-        """Update the relevant tables to match lists of LDAP users and groups"""
+        """Update the relevant tables to match lists of LDAP users and groups."""
         self.update_groups(groups)
         self.update_users(users)
         self.update_group_entities()
@@ -126,7 +128,7 @@ class PostgreSQLClient:
         self.assign_users_to_groups(groups, users)
 
     def update_groups(self, groups: list[LDAPGroup]) -> None:
-        """Update the entities table with desired groups"""
+        """Update the entities table with desired groups."""
         # Set groups to desired list
         logger.info(f"Ensuring that {len(groups)} group(s) are registered")
         desired_group_names = [group.name for group in groups]
@@ -167,7 +169,7 @@ class PostgreSQLClient:
             )
 
     def update_group_entities(self) -> None:
-        """Add group entities to the groups table"""
+        """Add group entities to the groups table."""
         current_user_group_entity_ids = [
             group.entity_id for group in self.backend.query(GuacamoleUserGroup)
         ]
@@ -206,7 +208,7 @@ class PostgreSQLClient:
         )
 
     def update_users(self, users: list[LDAPUser]) -> None:
-        """Update the entities table with desired users"""
+        """Update the entities table with desired users."""
         # Set users to desired list
         logger.info(f"Ensuring that {len(users)} user(s) are registered")
         desired_usernames = [user.name for user in users]
@@ -245,7 +247,7 @@ class PostgreSQLClient:
             )
 
     def update_user_entities(self, users: list[LDAPUser]) -> None:
-        """Add user entities to the users table"""
+        """Add user entities to the users table."""
         current_user_entity_ids = [
             user.entity_id for user in self.backend.query(GuacamoleUser)
         ]

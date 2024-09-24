@@ -16,6 +16,8 @@ logger = logging.getLogger("guacamole_user_sync")
 
 
 class LDAPClient:
+    """Client for connecting to an LDAP server."""
+
     def __init__(
         self,
         hostname: str,

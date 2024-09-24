@@ -22,6 +22,8 @@ from .mocks import (
 
 
 class TestLDAPClient:
+    """Test LDAPClient."""
+
     def test_constructor(self) -> None:
         client = LDAPClient(hostname="test-host")
         assert client.hostname == "test-host"

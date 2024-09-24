@@ -7,6 +7,8 @@ from guacamole_user_sync.models import LDAPSearchResult
 
 
 class MockLDAPObject:
+    """Mock LDAPObject."""
+
     def __init__(self, uri: str) -> None:
         self.uri = uri
         self.bind_dn = ""
@@ -20,6 +22,8 @@ class MockLDAPObject:
 
 
 class MockAsyncSearchList:
+    """Mock AsyncSearchList."""
+
     def __init__(
         self, partial: bool, results: LDAPSearchResult, *args: Any, **kwargs: Any
     ) -> None:
@@ -34,11 +38,15 @@ class MockAsyncSearchList:
 
 
 class MockAsyncSearchListFullResults(MockAsyncSearchList):
+    """Mock AsyncSearchList with full results."""
+
     def __init__(self, results: LDAPSearchResult) -> None:
         super().__init__(results=results, partial=False)
 
 
 class MockAsyncSearchListPartialResults(MockAsyncSearchList):
+    """Mock AsyncSearchList with partial results."""
+
     def __init__(self, results: LDAPSearchResult) -> None:
         super().__init__(results=results, partial=True)
 
@@ -47,6 +55,7 @@ T = TypeVar("T")
 
 
 class MockPostgreSQLBackend(Generic[T]):
+    """Mock PostgreSQLBackend."""
 
     def __init__(self, *data_lists: Any, **kwargs: Any) -> None:
         self.contents: dict[Type[T], list[T]] = {}

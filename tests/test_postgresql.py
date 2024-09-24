@@ -25,6 +25,8 @@ from .mocks import MockPostgreSQLBackend
 
 
 class TestPostgreSQLBackend:
+    """Test PostgreSQLBackend."""
+
     def mock_backend(
         self, test_session: bool = False
     ) -> tuple[PostgreSQLBackend, mock.MagicMock]:
@@ -173,6 +175,8 @@ class TestPostgreSQLBackend:
 
 
 class TestPostgreSQLClient:
+    """Test PostgreSQLClient."""
+
     client_kwargs: ClassVar[dict[str, Any]] = {
         "database_name": "database_name",
         "host_name": "host_name",

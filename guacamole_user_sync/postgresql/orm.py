@@ -11,15 +11,21 @@ from sqlalchemy.orm import (  # type:ignore
 
 
 class GuacamoleEntityType(enum.Enum):
+    """Guacamole entity enum."""
+
     USER = "USER"
     USER_GROUP = "USER_GROUP"
 
 
 class GuacamoleBase(DeclarativeBase):  # type:ignore
+    """Guacamole database base table."""
+
     pass
 
 
 class GuacamoleEntity(GuacamoleBase):
+    """Guacamole database GuacamoleEntity table."""
+
     __tablename__ = "guacamole_entity"
 
     entity_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -28,6 +34,8 @@ class GuacamoleEntity(GuacamoleBase):
 
 
 class GuacamoleUser(GuacamoleBase):
+    """Guacamole database GuacamoleUser table."""
+
     __tablename__ = "guacamole_user"
 
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -39,6 +47,8 @@ class GuacamoleUser(GuacamoleBase):
 
 
 class GuacamoleUserGroup(GuacamoleBase):
+    """Guacamole database GuacamoleUserGroup table."""
+
     __tablename__ = "guacamole_user_group"
 
     user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -46,6 +56,8 @@ class GuacamoleUserGroup(GuacamoleBase):
 
 
 class GuacamoleUserGroupMember(GuacamoleBase):
+    """Guacamole database GuacamoleUserGroupMember table."""
+
     __tablename__ = "guacamole_user_group_member"
 
     user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)

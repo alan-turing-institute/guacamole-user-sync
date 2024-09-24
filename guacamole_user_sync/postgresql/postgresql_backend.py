@@ -12,6 +12,8 @@ T = TypeVar("T")
 
 
 class PostgreSQLBackend:
+    """Backend for connecting to a PostgreSQL database."""
+
     def __init__(
         self,
         *,

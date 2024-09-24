@@ -10,10 +10,13 @@ logger = logging.getLogger("guacamole_user_sync")
 
 
 class SchemaVersion(StrEnum):
+    """Version for Guacamole database schema."""
+
     v1_5_5 = "1.5.5"
 
 
 class GuacamoleSchema:
+    """Schema for Guacamole database."""
 
     @classmethod
     def commands(cls, schema_version: SchemaVersion) -> list[TextClause]:
