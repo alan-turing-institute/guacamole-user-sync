@@ -109,6 +109,7 @@ select = [
     "F",   # pyflakes
     "I",   # isort
     "N",   # pep8-naming
+    "S",   # flake8-bandit
     "UP",  # pyupgrade
     "W",   # pycodestyle warnings
     "YTT", # flake8-2020
@@ -125,4 +126,5 @@ ignore = [
   "D203",     # one-blank-line-before-class [conflicts with D211]
   "D213",     # multi-line-summary-second-line [conflicts with D212]
   "D400",     # ends-in-period [conflicts with D415]
+  "S101",     # assert [conflicts with pytest]
 ]

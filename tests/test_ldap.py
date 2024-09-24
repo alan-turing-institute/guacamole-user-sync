@@ -46,12 +46,14 @@ class TestLDAPClient:
         monkeypatch.setattr(ldap, "initialize", mock_initialize)
 
         client = LDAPClient(
-            hostname="test-host", bind_dn="bind-dn", bind_password="bind_password"
+            hostname="test-host",
+            bind_dn="bind-dn",
+            bind_password="bind_password",  # noqa: S106
         )
         cnxn = client.connect()
         assert isinstance(cnxn, MockLDAPObject)
         assert cnxn.bind_dn == "bind-dn"
-        assert cnxn.bind_password == "bind_password"
+        assert cnxn.bind_password == "bind_password"  # noqa: S105
 
     def test_connect_with_failed_bind(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
@@ -62,7 +64,9 @@ class TestLDAPClient:
         monkeypatch.setattr(ldap, "initialize", mock_initialize)
 
         client = LDAPClient(
-            hostname="test-host", bind_dn="bind-dn", bind_password="incorrect-password"
+            hostname="test-host",
+            bind_dn="bind-dn",
+            bind_password="incorrect-password",  # noqa: S106
         )
         with pytest.raises(LDAPError):
             client.connect()

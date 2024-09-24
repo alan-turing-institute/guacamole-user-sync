@@ -40,7 +40,7 @@ class TestPostgreSQLBackend:
             host_name="host_name",
             port=1234,
             user_name="user_name",
-            user_password="user_password",
+            user_password="user_password",  # noqa: S106
             session=mock_session,
         )
         if test_session:
@@ -54,7 +54,7 @@ class TestPostgreSQLBackend:
         assert backend.host_name == "host_name"
         assert backend.port == 1234
         assert backend.user_name == "user_name"
-        assert backend.user_password == "user_password"
+        assert backend.user_password == "user_password"  # noqa: S105
 
     def test_engine(self) -> None:
         backend, _ = self.mock_backend()
