@@ -1,4 +1,4 @@
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, TypeVar
 
 import ldap
 from sqlalchemy.sql.expression import TextClause
@@ -58,7 +58,7 @@ class MockPostgreSQLBackend(Generic[T]):
     """Mock PostgreSQLBackend."""
 
     def __init__(self, *data_lists: Any, **kwargs: Any) -> None:
-        self.contents: dict[Type[T], list[T]] = {}
+        self.contents: dict[type[T], list[T]] = {}
         for data_list in data_lists:
             self.add_all(data_list)
 
@@ -75,7 +75,7 @@ class MockPostgreSQLBackend(Generic[T]):
         for command in commands:
             print(f"Executing {command}")
 
-    def query(self, table: Type[T], **filter_kwargs: Any) -> Any:
+    def query(self, table: type[T], **filter_kwargs: Any) -> Any:
         if table not in self.contents:
             self.contents[table] = []
         results = [item for item in self.contents[table]]

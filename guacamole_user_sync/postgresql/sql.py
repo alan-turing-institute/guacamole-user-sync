@@ -25,7 +25,7 @@ class GuacamoleSchema:
         sql_file_path = Path(__file__).with_name(
             f"guacamole_schema.{schema_version.value}.sql"
         )
-        with open(sql_file_path, "r") as f_sql:
+        with open(sql_file_path) as f_sql:
             statements = sqlparse.split(f_sql.read())
         for statement in statements:
             # Extract the first comment if there is one

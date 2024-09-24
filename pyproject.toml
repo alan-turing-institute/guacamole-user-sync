@@ -110,6 +110,7 @@ select = [
     "N",   # pep8-naming
     "UP",  # pyupgrade
     "W",   # pycodestyle warnings
+    "YTT", # flake8-2020
 ]
 ignore = [
   "D100",     # undocumented-public-module
