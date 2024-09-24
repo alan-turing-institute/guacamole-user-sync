@@ -34,6 +34,7 @@ RUN /root/.local/bin/hatch run pip freeze | grep -v "^-e" > requirements.txt && 
     sed -i "s/psycopg=/psycopg[c]=/g" requirements.txt && \
     python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
     python -m pip install auditwheel && \
+    mkdir -p /app/wheels && \
     for WHEEL in /app/repairable/*.whl; do \
         auditwheel repair --wheel-dir /app/wheels --plat manylinux_2_34_aarch64 "${WHEEL}" 2> /dev/null || mv "${WHEEL}" /app/wheels/; \
     done;
