@@ -4,11 +4,11 @@
 
 DO $$ BEGIN
   CREATE TYPE guacamole_connection_group_type AS ENUM(
-      'ORGANIZATIONAL',
-      'BALANCING'
+    'ORGANIZATIONAL',
+    'BALANCING'
   );
 EXCEPTION
-    WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN null;
 END $$;
 
 --
@@ -17,11 +17,11 @@ END $$;
 
 DO $$ BEGIN
   CREATE TYPE guacamole_entity_type AS ENUM(
-      'USER',
-      'USER_GROUP'
+    'USER',
+    'USER_GROUP'
   );
 EXCEPTION
-    WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN null;
 END $$;
 
 --
@@ -30,13 +30,13 @@ END $$;
 
 DO $$ BEGIN
   CREATE TYPE guacamole_object_permission_type AS ENUM(
-      'READ',
-      'UPDATE',
-      'DELETE',
-      'ADMINISTER'
+    'READ',
+    'UPDATE',
+    'DELETE',
+    'ADMINISTER'
   );
 EXCEPTION
-    WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN null;
 END $$;
 
 --
@@ -45,15 +45,15 @@ END $$;
 
 DO $$ BEGIN
   CREATE TYPE guacamole_system_permission_type AS ENUM(
-      'CREATE_CONNECTION',
-      'CREATE_CONNECTION_GROUP',
-      'CREATE_SHARING_PROFILE',
-      'CREATE_USER',
-      'CREATE_USER_GROUP',
-      'ADMINISTER'
+    'CREATE_CONNECTION',
+    'CREATE_CONNECTION_GROUP',
+    'CREATE_SHARING_PROFILE',
+    'CREATE_USER',
+    'CREATE_USER_GROUP',
+    'ADMINISTER'
   );
 EXCEPTION
-    WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN null;
 END $$;
 
 --
@@ -62,15 +62,16 @@ END $$;
 
 DO $$ BEGIN
   CREATE TYPE guacamole_proxy_encryption_method AS ENUM(
-      'NONE',
-      'SSL'
+    'NONE',
+    'SSL'
   );
 EXCEPTION
-    WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN null;
 END $$;
 
 --
--- Table of connection groups. Each connection group has a name.
+-- Table of connection groups
+-- Each connection group has a name.
 --
 
 CREATE TABLE IF NOT EXISTS guacamole_connection_group (
@@ -99,11 +100,11 @@ CREATE TABLE IF NOT EXISTS guacamole_connection_group (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_group_parent_id
-    ON guacamole_connection_group(parent_id);
+  ON guacamole_connection_group(parent_id);
 
 --
--- Table of connections. Each connection has a name, protocol, and
--- associated set of parameters.
+-- Table of connections
+-- Each connection has a name, protocol, and associated set of parameters.
 -- A connection may belong to a connection group.
 --
 
@@ -140,13 +141,14 @@ CREATE TABLE IF NOT EXISTS guacamole_connection (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_parent_id
-    ON guacamole_connection(parent_id);
+  ON guacamole_connection(parent_id);
 
 --
--- Table of base entities which may each be either a user or user group. Other
--- tables which represent qualities shared by both users and groups will point
--- to guacamole_entity, while tables which represent qualities specific to
--- users or groups will point to guacamole_user or guacamole_user_group.
+-- Table of base entities
+-- Each one may be either a user or user group.
+-- Other tables which represent qualities shared by both users and groups will
+-- point to guacamole_entity, while tables which represent qualities specific
+-- to users or groups will point to guacamole_user or guacamole_user_group.
 --
 
 CREATE TABLE IF NOT EXISTS guacamole_entity (
@@ -163,7 +165,8 @@ CREATE TABLE IF NOT EXISTS guacamole_entity (
 );
 
 --
--- Table of users. Each user has a unique username and a hashed password
+-- Table of users
+-- Each user has a unique username and a hashed password
 -- with corresponding salt. Although the authentication system will always set
 -- salted passwords, other systems may set unsalted passwords by simply not
 -- providing the salt.
@@ -213,7 +216,8 @@ CREATE TABLE IF NOT EXISTS guacamole_user (
 );
 
 --
--- Table of user groups. Each user group may have an arbitrary set of member
+-- Table of user groups
+-- Each user group may have an arbitrary set of member
 -- users and member groups, with those members inheriting the permissions
 -- granted to that group.
 --
@@ -239,7 +243,8 @@ CREATE TABLE IF NOT EXISTS guacamole_user_group (
 );
 
 --
--- Table of users which are members of given user groups.
+-- Table of users
+-- which are members of given user groups.
 --
 
 CREATE TABLE IF NOT EXISTS guacamole_user_group_member (
@@ -262,7 +267,8 @@ CREATE TABLE IF NOT EXISTS guacamole_user_group_member (
 );
 
 --
--- Table of sharing profiles. Each sharing profile has a name, associated set
+-- Table of sharing profiles
+-- Each sharing profile has a name, associated set
 -- of parameters, and a primary connection. The primary connection is the
 -- connection that the sharing profile shares, and the parameters dictate the
 -- restrictions/features which apply to the user joining the connection via the
@@ -288,11 +294,11 @@ CREATE TABLE IF NOT EXISTS guacamole_sharing_profile (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_sharing_profile_primary_connection_id
-    ON guacamole_sharing_profile(primary_connection_id);
+  ON guacamole_sharing_profile(primary_connection_id);
 
 --
--- Table of connection parameters. Each parameter is simply a name/value pair
--- associated with a connection.
+-- Table of connection parameters
+-- Each parameter is simply a name/value pair associated with a connection.
 --
 
 CREATE TABLE IF NOT EXISTS guacamole_connection_parameter (
@@ -313,7 +319,8 @@ CREATE INDEX IF NOT EXISTS guacamole_connection_parameter_connection_id
     ON guacamole_connection_parameter(connection_id);
 
 --
--- Table of sharing profile parameters. Each parameter is simply
+-- Table of sharing profile parameters
+-- Each parameter is simply
 -- name/value pair associated with a sharing profile. These parameters dictate
 -- the restrictions/features which apply to the user joining the associated
 -- connection via the sharing profile.
@@ -334,10 +341,11 @@ CREATE TABLE IF NOT EXISTS guacamole_sharing_profile_parameter (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_sharing_profile_parameter_sharing_profile_id
-    ON guacamole_sharing_profile_parameter(sharing_profile_id);
+  ON guacamole_sharing_profile_parameter(sharing_profile_id);
 
 --
--- Table of arbitrary user attributes. Each attribute is simply a name/value
+-- Table of arbitrary user attributes
+-- Each attribute is simply a name/value
 -- pair associated with a user. Arbitrary attributes are defined by other
 -- extensions. Attributes defined by this extension will be mapped to
 -- properly-typed columns of a specific table.
@@ -358,10 +366,11 @@ CREATE TABLE IF NOT EXISTS guacamole_user_attribute (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_user_attribute_user_id
-    ON guacamole_user_attribute(user_id);
+  ON guacamole_user_attribute(user_id);
 
 --
--- Table of arbitrary user group attributes. Each attribute is simply a
+-- Table of arbitrary user group attributes
+-- Each attribute is simply a
 -- name/value pair associated with a user group. Arbitrary attributes are
 -- defined by other extensions. Attributes defined by this extension will be
 -- mapped to properly-typed columns of a specific table.
@@ -382,10 +391,11 @@ CREATE TABLE IF NOT EXISTS guacamole_user_group_attribute (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_user_group_attribute_user_group_id
-    ON guacamole_user_group_attribute(user_group_id);
+  ON guacamole_user_group_attribute(user_group_id);
 
 --
--- Table of arbitrary connection attributes. Each attribute is simply a
+-- Table of arbitrary connection attributes
+-- Each attribute is simply a
 -- name/value pair associated with a connection. Arbitrary attributes are
 -- defined by other extensions. Attributes defined by this extension will be
 -- mapped to properly-typed columns of a specific table.
@@ -406,10 +416,11 @@ CREATE TABLE IF NOT EXISTS guacamole_connection_attribute (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_attribute_connection_id
-    ON guacamole_connection_attribute(connection_id);
+  ON guacamole_connection_attribute(connection_id);
 
 --
--- Table of arbitrary connection group attributes. Each attribute is simply a
+-- Table of arbitrary connection group attributes
+-- Each attribute is simply a
 -- name/value pair associated with a connection group. Arbitrary attributes are
 -- defined by other extensions. Attributes defined by this extension will be
 -- mapped to properly-typed columns of a specific table.
@@ -430,10 +441,11 @@ CREATE TABLE IF NOT EXISTS guacamole_connection_group_attribute (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_group_attribute_connection_group_id
-    ON guacamole_connection_group_attribute(connection_group_id);
+  ON guacamole_connection_group_attribute(connection_group_id);
 
 --
--- Table of arbitrary sharing profile attributes. Each attribute is simply a
+-- Table of arbitrary sharing profile attributes
+-- Each attribute is simply a
 -- name/value pair associated with a sharing profile. Arbitrary attributes are
 -- defined by other extensions. Attributes defined by this extension will be
 -- mapped to properly-typed columns of a specific table.
@@ -454,10 +466,11 @@ CREATE TABLE IF NOT EXISTS guacamole_sharing_profile_attribute (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_sharing_profile_attribute_sharing_profile_id
-    ON guacamole_sharing_profile_attribute(sharing_profile_id);
+  ON guacamole_sharing_profile_attribute(sharing_profile_id);
 
 --
--- Table of connection permissions. Each connection permission grants a user or
+-- Table of connection permissions
+-- Each connection permission grants a user or
 -- user group specific access to a connection.
 --
 
@@ -480,13 +493,14 @@ CREATE TABLE IF NOT EXISTS guacamole_connection_permission (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_permission_connection_id
-    ON guacamole_connection_permission(connection_id);
+  ON guacamole_connection_permission(connection_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_permission_entity_id
-    ON guacamole_connection_permission(entity_id);
+  ON guacamole_connection_permission(entity_id);
 
 --
--- Table of connection group permissions. Each group permission grants a user
+-- Table of connection group permissions
+-- Each group permission grants a user
 -- or user group specific access to a connection group.
 --
 
@@ -509,13 +523,14 @@ CREATE TABLE IF NOT EXISTS guacamole_connection_group_permission (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_group_permission_connection_group_id
-    ON guacamole_connection_group_permission(connection_group_id);
+  ON guacamole_connection_group_permission(connection_group_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_group_permission_entity_id
-    ON guacamole_connection_group_permission(entity_id);
+  ON guacamole_connection_group_permission(entity_id);
 
 --
--- Table of sharing profile permissions. Each sharing profile permission grants
+-- Table of sharing profile permissions
+-- Each sharing profile permission grants
 -- a user or user group specific access to a sharing profile.
 --
 
@@ -538,13 +553,14 @@ CREATE TABLE IF NOT EXISTS guacamole_sharing_profile_permission (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_sharing_profile_permission_sharing_profile_id
-    ON guacamole_sharing_profile_permission(sharing_profile_id);
+  ON guacamole_sharing_profile_permission(sharing_profile_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_sharing_profile_permission_entity_id
-    ON guacamole_sharing_profile_permission(entity_id);
+  ON guacamole_sharing_profile_permission(entity_id);
 
 --
--- Table of system permissions. Each system permission grants a user or user
+-- Table of system permissions
+-- Each system permission grants a user or user
 -- group a system-level privilege of some kind.
 --
 
@@ -565,7 +581,8 @@ CREATE INDEX IF NOT EXISTS guacamole_system_permission_entity_id
     ON guacamole_system_permission(entity_id);
 
 --
--- Table of user permissions. Each user permission grants a user or user group
+-- Table of user permissions
+-- Each user permission grants a user or user group
 -- access to another user (the "affected" user) for a specific type of
 -- operation.
 --
@@ -589,13 +606,14 @@ CREATE TABLE IF NOT EXISTS guacamole_user_permission (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_user_permission_affected_user_id
-    ON guacamole_user_permission(affected_user_id);
+  ON guacamole_user_permission(affected_user_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_user_permission_entity_id
-    ON guacamole_user_permission(entity_id);
+  ON guacamole_user_permission(entity_id);
 
 --
--- Table of user group permissions. Each user group permission grants a user
+-- Table of user group permissions
+-- Each user group permission grants a user
 -- or user group access to a another user group (the "affected" user group) for
 -- a specific type of operation.
 --
@@ -619,13 +637,14 @@ CREATE TABLE IF NOT EXISTS guacamole_user_group_permission (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_user_group_permission_affected_user_group_id
-    ON guacamole_user_group_permission(affected_user_group_id);
+  ON guacamole_user_group_permission(affected_user_group_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_user_group_permission_entity_id
-    ON guacamole_user_group_permission(entity_id);
+  ON guacamole_user_group_permission(entity_id);
 
 --
--- Table of connection history records. Each record defines a specific user's
+-- Table of connection history records
+-- Each record defines a specific user's
 -- session, including the connection used, the start time, and the end time
 -- (if any).
 --
@@ -660,25 +679,25 @@ CREATE TABLE IF NOT EXISTS guacamole_connection_history (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_history_user_id
-    ON guacamole_connection_history(user_id);
+  ON guacamole_connection_history(user_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_history_connection_id
-    ON guacamole_connection_history(connection_id);
+  ON guacamole_connection_history(connection_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_history_sharing_profile_id
-    ON guacamole_connection_history(sharing_profile_id);
+  ON guacamole_connection_history(sharing_profile_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_history_start_date
-    ON guacamole_connection_history(start_date);
+  ON guacamole_connection_history(start_date);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_history_end_date
-    ON guacamole_connection_history(end_date);
+  ON guacamole_connection_history(end_date);
 
 CREATE INDEX IF NOT EXISTS guacamole_connection_history_connection_id_start_date
-    ON guacamole_connection_history(connection_id, start_date);
+  ON guacamole_connection_history(connection_id, start_date);
 
 --
--- User login/logout history
+-- Table of user login/logout history
 --
 
 CREATE TABLE IF NOT EXISTS guacamole_user_history (
@@ -699,19 +718,19 @@ CREATE TABLE IF NOT EXISTS guacamole_user_history (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_user_history_user_id
-    ON guacamole_user_history(user_id);
+  ON guacamole_user_history(user_id);
 
 CREATE INDEX IF NOT EXISTS guacamole_user_history_start_date
-    ON guacamole_user_history(start_date);
+  ON guacamole_user_history(start_date);
 
 CREATE INDEX IF NOT EXISTS guacamole_user_history_end_date
-    ON guacamole_user_history(end_date);
+  ON guacamole_user_history(end_date);
 
 CREATE INDEX IF NOT EXISTS guacamole_user_history_user_id_start_date
-    ON guacamole_user_history(user_id, start_date);
+  ON guacamole_user_history(user_id, start_date);
 
 --
--- User password history
+-- Table of user password history
 --
 
 CREATE TABLE IF NOT EXISTS guacamole_user_password_history (
@@ -733,4 +752,4 @@ CREATE TABLE IF NOT EXISTS guacamole_user_password_history (
 );
 
 CREATE INDEX IF NOT EXISTS guacamole_user_password_history_user_id
-    ON guacamole_user_password_history(user_id);
+  ON guacamole_user_password_history(user_id);

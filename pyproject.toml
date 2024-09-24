@@ -1,0 +1,109 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "guacamole-user-sync"
+dynamic = ["version"]
+description = "Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microsoft Active Directory"
+readme = "README.md"
+requires-python = "==3.11.*"
+license = "MIT"
+keywords = []
+authors = [
+      { name = "James Robinson", email = "james.em.robinson@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "psycopg==3.2.1",
+    "python-ldap==3.4.4",
+    "SQLAlchemy==2.0.32",
+    "sqlparse==0.5.1",
+]
+
+[project.urls]
+Documentation = "https://github.com/alan-turing-institute/guacamole-user-sync#readme"
+Issues = "https://github.com/alan-turing-institute/guacamole-user-sync/issues"
+Source = "https://github.com/alan-turing-institute/guacamole-user-sync"
+
+[project.optional-dependencies]
+lint = [
+    "black==24.8.0",
+    "mypy==1.11.2",
+    "ruff==0.6.2",
+    "types-SQLAlchemy==1.4.53.38",
+]
+test = [
+    "coverage[toml]==7.6.1",
+    "pytest==8.3.2",
+]
+
+[tool.coverage.paths]
+source = ["guacamole_user_sync/"]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.coverage.run]
+include = ["guacamole_user_sync/*"]
+omit = ["tests/*"]
+relative_files = true
+
+[tool.hatch.version]
+path = "guacamole_user_sync/__about__.py"
+
+[tool.hatch.envs.lint]
+detached = true
+features = ["lint"]
+
+[tool.hatch.envs.lint.scripts]
+all = [
+    "fmt",
+    "style",
+    "typing",
+]
+fmt = [
+    "black {args:guacamole_user_sync tests synchronise.py}",
+    "ruff check --fix {args:guacamole_user_sync tests synchronise.py}",
+]
+style = [
+    "ruff check {args:guacamole_user_sync tests synchronise.py}",
+    "black --check --diff {args:guacamole_user_sync tests synchronise.py}",
+]
+typing = "mypy {args:guacamole_user_sync tests synchronise.py}"
+
+[tool.hatch.envs.test]
+features = ["test"]
+
+[tool.hatch.envs.test.scripts]
+all = ["python-test", "python-coverage"]
+python-test = "coverage run -m pytest {args: tests}"
+python-coverage = "coverage report {args:}"
+
+[tool.mypy]
+disallow_untyped_decorators = false  # workaround for incorrectly-flagged pytest.fixture calls
+files = "guacamole_user_sync"        # run mypy over this directory
+strict = true                        # enable all optional error checking flags
+
+[[tool.mypy.overrides]]
+module = [
+    "ldap.*",
+    "pytest.*",
+    "sqlparse.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff.lint]
+select = [
+    # See https://beta.ruff.rs/docs/rules/
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "W",   # pycodestyle warnings
+]
