@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -194,7 +194,7 @@ def postgresql_model_guacamoleuser_fixture() -> list[GuacamoleUser]:
             full_name="Aulus Agerius",
             password_hash=b"PASSWORD_HASH",
             password_salt=b"PASSWORD_SALT",
-            password_date=datetime(1, 1, 1),
+            password_date=datetime(1, 1, 1, tzinfo=UTC),
         ),
         GuacamoleUser(
             user_id=2,
@@ -202,7 +202,7 @@ def postgresql_model_guacamoleuser_fixture() -> list[GuacamoleUser]:
             full_name="Numerius Negidius",
             password_hash=b"PASSWORD_HASH",
             password_salt=b"PASSWORD_SALT",
-            password_date=datetime(1, 1, 1),
+            password_date=datetime(1, 1, 1, tzinfo=UTC),
         ),
     ]
 

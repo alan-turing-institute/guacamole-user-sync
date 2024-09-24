@@ -1,6 +1,6 @@
-import datetime
 import logging
 import secrets
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import OperationalError
 
@@ -278,7 +278,7 @@ class PostgreSQLClient:
                 GuacamoleUser(
                     entity_id=user_tuple[0],
                     full_name=user_tuple[1].display_name,
-                    password_date=datetime.datetime.now(),
+                    password_date=datetime.now(tz=UTC),
                     password_hash=secrets.token_bytes(32),
                     password_salt=secrets.token_bytes(32),
                 )

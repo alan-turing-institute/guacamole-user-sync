@@ -108,6 +108,7 @@ select = [
     "C90", # McCabe complexity
     "COM", # flake8-commas
     "D",   # pydocstyle
+    "DTZ", # flake8-datetimez
     "E",   # pycodestyle errors
     "F",   # pyflakes
     "FBT", # flake8-boolean-trap
