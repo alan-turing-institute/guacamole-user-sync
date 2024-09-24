@@ -28,27 +28,25 @@ from .mocks import MockPostgreSQLBackend
 class TestPostgreSQLBackend:
     """Test PostgreSQLBackend."""
 
-    def mock_backend(
-        self, test_session: bool = False
-    ) -> tuple[PostgreSQLBackend, mock.MagicMock]:
-        mock_session = mock.MagicMock()
-        mock_session.__enter__.return_value = mock_session
-        mock_session.filter.return_value = mock_session
-        mock_session.query.return_value = mock_session
-        backend = PostgreSQLBackend(
+    def mock_backend(self, session: Session | None = None) -> PostgreSQLBackend:
+        return PostgreSQLBackend(
             database_name="database_name",
             host_name="host_name",
             port=1234,
             user_name="user_name",
             user_password="user_password",  # noqa: S106
-            session=mock_session,
+            session=session,
         )
-        if test_session:
-            backend._session = None
-        return (backend, mock_session)
+
+    def mock_session(self) -> mock.MagicMock:
+        mock_session = mock.MagicMock()
+        mock_session.__enter__.return_value = mock_session
+        mock_session.filter.return_value = mock_session
+        mock_session.query.return_value = mock_session
+        return mock_session
 
     def test_constructor(self) -> None:
-        backend, _ = self.mock_backend()
+        backend = self.mock_backend()
         assert isinstance(backend, PostgreSQLBackend)
         assert backend.database_name == "database_name"
         assert backend.host_name == "host_name"
@@ -57,7 +55,7 @@ class TestPostgreSQLBackend:
         assert backend.user_password == "user_password"  # noqa: S105
 
     def test_engine(self) -> None:
-        backend, _ = self.mock_backend()
+        backend = self.mock_backend()
         assert isinstance(backend.engine, Engine)
         assert isinstance(backend.engine.pool, QueuePool)
         assert isinstance(backend.engine.dialect, PGDialect_psycopg)
@@ -67,14 +65,15 @@ class TestPostgreSQLBackend:
         assert not backend.engine.hide_parameters  # type: ignore
 
     def test_session(self) -> None:
-        backend, _ = self.mock_backend(test_session=True)
+        backend = self.mock_backend()
         assert isinstance(backend.session(), Session)
 
     def test_add_all(
         self,
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
     ) -> None:
-        backend, session = self.mock_backend()
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.add_all(postgresql_model_guacamoleentity_fixture)
 
         # Check method calls
@@ -86,14 +85,12 @@ class TestPostgreSQLBackend:
         assert len(execute_args) == 1
         assert len(execute_args[0]) == len(postgresql_model_guacamoleentity_fixture)
 
-    def test_delete(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
+    def test_delete(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.delete(GuacamoleEntity)
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter.assert_not_called()
         session.delete.assert_called_once()
@@ -104,16 +101,14 @@ class TestPostgreSQLBackend:
         assert len(query_args) == 1
         assert isinstance(query_args[0], type(GuacamoleEntity))
 
-    def test_delete_with_filter(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
+    def test_delete_with_filter(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.delete(
             GuacamoleEntity, GuacamoleEntity.type == GuacamoleEntityType.USER
         )
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter.assert_called_once()
         session.delete.assert_called_once()
@@ -127,22 +122,19 @@ class TestPostgreSQLBackend:
         assert len(filter_args) == 1
         assert isinstance(filter_args[0], BinaryExpression)
 
-    def test_execute_commands(
-        self,
-    ) -> None:
+    def test_execute_commands(self) -> None:
         command = text("SELECT * FROM guacamole_entity;")
-        backend, session = self.mock_backend()
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.execute_commands([command])
         session.execute.assert_called_once_with(command)
 
-    def test_query(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
+    def test_query(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.query(GuacamoleEntity)
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter.assert_not_called()
         session.delete.assert_not_called()
@@ -153,14 +145,12 @@ class TestPostgreSQLBackend:
         assert len(query_args) == 1
         assert isinstance(query_args[0], type(GuacamoleEntity))
 
-    def test_query_with_filter(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
+    def test_query_with_filter(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.query(GuacamoleEntity, type=GuacamoleEntityType.USER)
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter_by.assert_called_once()
         session.__exit__.assert_called_once()

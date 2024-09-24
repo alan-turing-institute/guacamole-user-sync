@@ -26,7 +26,7 @@ class MockAsyncSearchList:
 
     def __init__(
         self,
-        partial: bool,
+        partial: bool,  # noqa: FBT001
         results: LDAPSearchResult,
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
