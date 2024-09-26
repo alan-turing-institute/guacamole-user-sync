@@ -91,9 +91,6 @@ class LDAPClient:
             )
             if searcher.processResults() != 0:
                 logger.warning("Only partial results received.")
-            results = searcher.allResults
-            logger.debug("Server returned %s results.", len(results))
-            return results
         except ldap.NO_SUCH_OBJECT as exc:
             logger.warning("Server returned no results.")
             raise LDAPError from exc
@@ -103,3 +100,7 @@ class LDAPClient:
         except ldap.SIZELIMIT_EXCEEDED as exc:
             logger.warning("Server-side size limit exceeded.")
             raise LDAPError from exc
+        else:
+            results = searcher.allResults
+            logger.debug("Server returned %s results.", len(results))
+            return results
