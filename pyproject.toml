@@ -122,6 +122,7 @@ select = [
     "LOG", # flake8-logging
     "N",   # pep8-naming
     "PIE", # flake8-pie
+    "PYI", # flake8-pyi
     "S",   # flake8-bandit
     "T20", # flake8-print
     "UP",  # pyupgrade
