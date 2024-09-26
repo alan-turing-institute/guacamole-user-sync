@@ -112,6 +112,7 @@ select = [
     "E",   # pycodestyle errors
     "EM",  # flake8-errmsg
     "F",   # pyflakes
+    "FA",  # flake8-future-annotations
     "FBT", # flake8-boolean-trap
     "I",   # isort
     "N",   # pep8-naming
