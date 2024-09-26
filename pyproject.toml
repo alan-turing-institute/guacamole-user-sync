@@ -115,6 +115,7 @@ select = [
     "F",   # pyflakes
     "FA",  # flake8-future-annotations
     "FBT", # flake8-boolean-trap
+    "FLY", # flynt
     "G",   # flake8-logging-format
     "I",   # isort
     "ICN", # flake8-import-conventions
