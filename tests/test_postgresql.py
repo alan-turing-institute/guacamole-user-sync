@@ -3,21 +3,24 @@ from typing import Any, ClassVar
 from unittest import mock
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import URL, Engine, text
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg
-from sqlalchemy.engine import URL, Engine  # type: ignore
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
-from sqlalchemy.pool.impl import QueuePool
-from sqlalchemy.sql.elements import BinaryExpression
+from sqlalchemy.pool import QueuePool
+from sqlalchemy.sql.elements import BinaryExpression, TextClause
 
-from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLException
-from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
+from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLError
+from guacamole_user_sync.postgresql import (
+    PostgreSQLBackend,
+    PostgreSQLClient,
+    PostgreSQLConnectionDetails,
+)
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
+    GuacamoleEntityType,
     GuacamoleUser,
     GuacamoleUserGroup,
-    guacamole_entity_type,
 )
 from guacamole_user_sync.postgresql.sql import SchemaVersion
 
@@ -25,53 +28,57 @@ from .mocks import MockPostgreSQLBackend
 
 
 class TestPostgreSQLBackend:
-    def mock_backend(
-        self, test_session: bool = False
-    ) -> tuple[PostgreSQLBackend, mock.MagicMock]:
+    """Test PostgreSQLBackend."""
+
+    def mock_backend(self, session: Session | None = None) -> PostgreSQLBackend:
+        return PostgreSQLBackend(
+            connection_details=PostgreSQLConnectionDetails(
+                database_name="database_name",
+                host_name="host_name",
+                port=1234,
+                user_name="user_name",
+                user_password="user_password",  # noqa: S106
+            ),
+            session=session,
+        )
+
+    def mock_session(self) -> mock.MagicMock:
         mock_session = mock.MagicMock()
         mock_session.__enter__.return_value = mock_session
         mock_session.filter.return_value = mock_session
         mock_session.query.return_value = mock_session
-        backend = PostgreSQLBackend(
-            database_name="database_name",
-            host_name="host_name",
-            port=1234,
-            user_name="user_name",
-            user_password="user_password",
-            session=mock_session,
-        )
-        if test_session:
-            backend._session = None
-        return (backend, mock_session)
+        return mock_session
 
     def test_constructor(self) -> None:
-        backend, _ = self.mock_backend()
+        backend = self.mock_backend()
         assert isinstance(backend, PostgreSQLBackend)
-        assert backend.database_name == "database_name"
-        assert backend.host_name == "host_name"
-        assert backend.port == 1234
-        assert backend.user_name == "user_name"
-        assert backend.user_password == "user_password"
+        assert isinstance(backend.connection_details, PostgreSQLConnectionDetails)
+        assert backend.connection_details.database_name == "database_name"
+        assert backend.connection_details.host_name == "host_name"
+        assert backend.connection_details.port == 1234  # noqa: PLR2004
+        assert backend.connection_details.user_name == "user_name"
+        assert backend.connection_details.user_password == "user_password"  # noqa: S105
 
     def test_engine(self) -> None:
-        backend, _ = self.mock_backend()
+        backend = self.mock_backend()
         assert isinstance(backend.engine, Engine)
         assert isinstance(backend.engine.pool, QueuePool)
         assert isinstance(backend.engine.dialect, PGDialect_psycopg)
         assert isinstance(backend.engine.url, URL)
         assert backend.engine.logging_name is None
         assert not backend.engine.echo
-        assert not backend.engine.hide_parameters  # type: ignore
+        assert not backend.engine.hide_parameters
 
     def test_session(self) -> None:
-        backend, _ = self.mock_backend(test_session=True)
+        backend = self.mock_backend()
         assert isinstance(backend.session(), Session)
 
     def test_add_all(
         self,
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
     ) -> None:
-        backend, session = self.mock_backend()
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.add_all(postgresql_model_guacamoleentity_fixture)
 
         # Check method calls
@@ -83,14 +90,12 @@ class TestPostgreSQLBackend:
         assert len(execute_args) == 1
         assert len(execute_args[0]) == len(postgresql_model_guacamoleentity_fixture)
 
-    def test_delete(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
+    def test_delete(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.delete(GuacamoleEntity)
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter.assert_not_called()
         session.delete.assert_called_once()
@@ -101,16 +106,15 @@ class TestPostgreSQLBackend:
         assert len(query_args) == 1
         assert isinstance(query_args[0], type(GuacamoleEntity))
 
-    def test_delete_with_filter(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
+    def test_delete_with_filter(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.delete(
-            GuacamoleEntity, GuacamoleEntity.type == guacamole_entity_type.USER
+            GuacamoleEntity,
+            GuacamoleEntity.type == GuacamoleEntityType.USER,
         )
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter.assert_called_once()
         session.delete.assert_called_once()
@@ -124,22 +128,35 @@ class TestPostgreSQLBackend:
         assert len(filter_args) == 1
         assert isinstance(filter_args[0], BinaryExpression)
 
-    def test_execute_commands(
-        self,
-    ) -> None:
+    def test_execute_commands(self) -> None:
         command = text("SELECT * FROM guacamole_entity;")
-        backend, session = self.mock_backend()
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.execute_commands([command])
         session.execute.assert_called_once_with(command)
 
-    def test_query(
+    def test_execute_commands_exception(
         self,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        backend, session = self.mock_backend()
+        command = text("SELECT * FROM guacamole_entity;")
+        session = self.mock_session()
+        session.execute.side_effect = OperationalError(
+            statement="exception reason",
+            params=None,
+            orig=None,
+        )
+        backend = self.mock_backend(session=session)
+        with pytest.raises(OperationalError, match="SQL: exception reason"):
+            backend.execute_commands([command])
+        assert "Unable to execute PostgreSQL commands." in caplog.text
+
+    def test_query(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
         backend.query(GuacamoleEntity)
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter.assert_not_called()
         session.delete.assert_not_called()
@@ -150,14 +167,12 @@ class TestPostgreSQLBackend:
         assert len(query_args) == 1
         assert isinstance(query_args[0], type(GuacamoleEntity))
 
-    def test_query_with_filter(
-        self,
-    ) -> None:
-        backend, session = self.mock_backend()
-        backend.query(GuacamoleEntity, type=guacamole_entity_type.USER)
+    def test_query_with_filter(self) -> None:
+        session = self.mock_session()
+        backend = self.mock_backend(session=session)
+        backend.query(GuacamoleEntity, type=GuacamoleEntityType.USER)
 
         # Check method calls
-        print(session.mock_calls)
         session.query.assert_called_once()
         session.filter_by.assert_called_once()
         session.__exit__.assert_called_once()
@@ -169,10 +184,12 @@ class TestPostgreSQLBackend:
         filter_by_kwargs = session.filter_by.call_args.kwargs
         assert len(filter_by_kwargs) == 1
         assert "type" in filter_by_kwargs
-        assert filter_by_kwargs["type"] == guacamole_entity_type.USER
+        assert filter_by_kwargs["type"] == GuacamoleEntityType.USER
 
 
 class TestPostgreSQLClient:
+    """Test PostgreSQLClient."""
+
     client_kwargs: ClassVar[dict[str, Any]] = {
         "database_name": "database_name",
         "host_name": "host_name",
@@ -188,14 +205,14 @@ class TestPostgreSQLClient:
 
     def test_assign_users_to_groups(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_fixture,
             postgresql_model_guacamoleusergroup_fixture,
         )
@@ -205,13 +222,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture,
             )
             for output_line in (
                 "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
@@ -223,14 +241,14 @@ class TestPostgreSQLClient:
 
     def test_assign_users_to_groups_missing_ldap_user(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_fixture,
             postgresql_model_guacamoleusergroup_fixture,
         )
@@ -240,13 +258,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture[0:1]
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture[0:1],
             )
             for output_line in (
                 "Ensuring that 1 user(s) are correctly assigned among 3 group(s)",
@@ -255,19 +274,19 @@ class TestPostgreSQLClient:
             ):
                 assert output_line in caplog.text
 
-    def test_assign_users_to_groups_missing_user_entity(
+    def test_assign_users_to_groups_missing_user_entity(  # noqa: PLR0913
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_fixture[1:],
-            postgresql_model_guacamoleentity_USER_GROUP_fixture,
+        mock_backend = MockPostgreSQLBackend(
+            postgresql_model_guacamoleentity_user_fixture[1:],
+            postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleusergroup_fixture,
         )
 
@@ -276,30 +295,31 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture,
             )
 
             for output_line in (
-                "Could not find entity ID for LDAP user aulus.agerius",
+                "Could not find entity ID for LDAP user 'aulus.agerius'",
             ):
                 assert output_line in caplog.text
 
     def test_assign_users_to_groups_missing_usergroup(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleentity_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_fixture,
             postgresql_model_guacamoleusergroup_fixture[1:],
         )
@@ -309,13 +329,14 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.assign_users_to_groups(
-                ldap_model_groups_fixture, ldap_model_users_fixture
+                ldap_model_groups_fixture,
+                ldap_model_users_fixture,
             )
 
             for output_line in (
@@ -325,13 +346,13 @@ class TestPostgreSQLClient:
             ):
                 assert output_line in caplog.text
 
-    def test_ensure_schema(self, capsys: Any) -> None:
+    def test_ensure_schema(self, capsys: pytest.CaptureFixture) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()  # type: ignore
+        mock_backend = MockPostgreSQLBackend()
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -414,47 +435,51 @@ class TestPostgreSQLClient:
                     f"Executing CREATE INDEX IF NOT EXISTS {index_name}" in captured.out
                 )
 
-    def test_ensure_schema_exception(self, capsys: Any) -> None:
+    def test_ensure_schema_exception(self) -> None:
         # Create a mock backend
-        def execute_commands_exception(commands: Any) -> None:
+        def execute_commands_exception(
+            commands: list[TextClause],  # noqa: ARG001
+        ) -> None:
             raise OperationalError(statement="statement", params=None, orig=None)
 
-        mock_backend = MockPostgreSQLBackend()  # type: ignore
-        mock_backend.execute_commands = execute_commands_exception  # type: ignore
+        mock_backend = MockPostgreSQLBackend()
+        mock_backend.execute_commands = execute_commands_exception  # type: ignore[method-assign]
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             with pytest.raises(
-                PostgreSQLException, match="Unable to ensure PostgreSQL schema."
+                PostgreSQLError,
+                match="Unable to ensure PostgreSQL schema.",
             ):
                 client.ensure_schema(SchemaVersion.v1_5_5)
 
     def test_update(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
         ldap_model_users_fixture: list[LDAPUser],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()  # type: ignore
+        mock_backend = MockPostgreSQLBackend()
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
             client = PostgreSQLClient(**self.client_kwargs)
             client.update(
-                groups=ldap_model_groups_fixture, users=ldap_model_users_fixture
+                groups=ldap_model_groups_fixture,
+                users=ldap_model_users_fixture,
             )
             for output_line in (
                 "Ensuring that 3 group(s) are registered",
@@ -469,7 +494,7 @@ class TestPostgreSQLClient:
                 "... 3 user group entit(y|ies) will be added",
                 "There are 3 valid user group entit(y|ies)",
                 "There are 0 user entit(y|ies) currently registered",
-                "... 0 user entit(y|ies) will be added",
+                "... 2 user entit(y|ies) will be added",
                 "There are 2 valid user entit(y|ies)",
                 "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
                 "Working on group 'defendants'",
@@ -488,13 +513,13 @@ class TestPostgreSQLClient:
 
     def test_update_group_entities(
         self,
-        caplog: Any,
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        caplog: pytest.LogCaptureFixture,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_GROUP_fixture,
+        mock_backend = MockPostgreSQLBackend(
+            postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleusergroup_fixture[0:1],
         )
 
@@ -503,7 +528,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -518,19 +543,19 @@ class TestPostgreSQLClient:
 
     def test_update_groups(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],
-        postgresql_model_guacamoleentity_USER_GROUP_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_GROUP_fixture[0:1],
+        mock_backend = MockPostgreSQLBackend(
+            postgresql_model_guacamoleentity_user_group_fixture[0:1],
             [
                 GuacamoleEntity(
                     entity_id=99,
                     name="to-be-deleted",
-                    type=guacamole_entity_type.USER_GROUP,
-                )
+                    type=GuacamoleEntityType.USER_GROUP,
+                ),
             ],
         )
 
@@ -539,7 +564,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -552,14 +577,14 @@ class TestPostgreSQLClient:
 
     def test_update_user_entities(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_users_fixture: list[LDAPUser],
         postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_fixture,
+        mock_backend = MockPostgreSQLBackend(
+            postgresql_model_guacamoleentity_user_fixture,
             postgresql_model_guacamoleuser_fixture[0:1],
         )
 
@@ -568,7 +593,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 
@@ -583,17 +608,19 @@ class TestPostgreSQLClient:
 
     def test_update_users(
         self,
-        caplog: Any,
+        caplog: pytest.LogCaptureFixture,
         ldap_model_users_fixture: list[LDAPUser],
-        postgresql_model_guacamoleentity_USER_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
-            postgresql_model_guacamoleentity_USER_fixture[0:1],
+        mock_backend = MockPostgreSQLBackend(
+            postgresql_model_guacamoleentity_user_fixture[0:1],
             [
                 GuacamoleEntity(
-                    entity_id=99, name="to-be-deleted", type=guacamole_entity_type.USER
-                )
+                    entity_id=99,
+                    name="to-be-deleted",
+                    type=GuacamoleEntityType.USER,
+                ),
             ],
         )
 
@@ -602,7 +629,7 @@ class TestPostgreSQLClient:
 
         # Patch PostgreSQLBackend
         with mock.patch(
-            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend"
+            "guacamole_user_sync.postgresql.postgresql_client.PostgreSQLBackend",
         ) as mock_postgresql_backend:
             mock_postgresql_backend.return_value = mock_backend
 

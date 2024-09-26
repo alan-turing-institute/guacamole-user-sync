@@ -1,6 +1,6 @@
-class LDAPException(Exception):
-    pass
+class LDAPError(Exception):
+    """LDAP error."""
 
 
-class PostgreSQLException(Exception):
-    pass
+class PostgreSQLError(Exception):
+    """PostgreSQL error."""

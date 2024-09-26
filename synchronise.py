@@ -4,11 +4,11 @@ import os
 import time
 
 from guacamole_user_sync.ldap import LDAPClient
-from guacamole_user_sync.models import LDAPException, LDAPQuery, PostgreSQLException
+from guacamole_user_sync.models import LDAPError, LDAPQuery, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
 
-def main(
+def main(  # noqa: PLR0913
     ldap_bind_dn: str | None,
     ldap_bind_password: str | None,
     ldap_group_base_dn: str,
@@ -61,7 +61,7 @@ def main(
         )
 
         # Wait before repeating
-        logger.info(f"Waiting {repeat_interval} seconds.")
+        logger.info("Waiting %s seconds.", repeat_interval)
         time.sleep(repeat_interval)
 
 
@@ -76,37 +76,45 @@ def synchronise(
     try:
         ldap_groups = ldap_client.search_groups(ldap_group_query)
         ldap_users = ldap_client.search_users(ldap_user_query)
-    except LDAPException:
+    except LDAPError:
         logger.warning("LDAP server query failed")
         return
 
     try:
         postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
         postgresql_client.update(groups=ldap_groups, users=ldap_users)
-    except PostgreSQLException:
+    except PostgreSQLError:
         logger.warning("PostgreSQL update failed")
         return
 
 
 if __name__ == "__main__":
     if not (ldap_host := os.getenv("LDAP_HOST", None)):
-        raise ValueError("LDAP_HOST is not defined")
+        msg = "LDAP_HOST is not defined"
+        raise ValueError(msg)
     if not (ldap_group_base_dn := os.getenv("LDAP_GROUP_BASE_DN", None)):
-        raise ValueError("LDAP_GROUP_BASE_DN is not defined")
+        msg = "LDAP_GROUP_BASE_DN is not defined"
+        raise ValueError(msg)
     if not (ldap_group_filter := os.getenv("LDAP_GROUP_FILTER", None)):
-        raise ValueError("LDAP_GROUP_FILTER is not defined")
+        msg = "LDAP_GROUP_FILTER is not defined"
+        raise ValueError(msg)
 
     if not (ldap_user_base_dn := os.getenv("LDAP_USER_BASE_DN", None)):
-        raise ValueError("LDAP_USER_BASE_DN is not defined")
+        msg = "LDAP_USER_BASE_DN is not defined"
+        raise ValueError(msg)
     if not (ldap_user_filter := os.getenv("LDAP_USER_FILTER", None)):
-        raise ValueError("LDAP_USER_FILTER is not defined")
+        msg = "LDAP_USER_FILTER is not defined"
+        raise ValueError(msg)
 
     if not (postgresql_host_name := os.getenv("POSTGRESQL_HOST", None)):
-        raise ValueError("POSTGRESQL_HOST is not defined")
+        msg = "POSTGRESQL_HOST is not defined"
+        raise ValueError(msg)
     if not (postgresql_password := os.getenv("POSTGRESQL_PASSWORD", None)):
-        raise ValueError("POSTGRESQL_PASSWORD is not defined")
+        msg = "POSTGRESQL_PASSWORD is not defined"
+        raise ValueError(msg)
     if not (postgresql_user_name := os.getenv("POSTGRESQL_USERNAME", None)):
-        raise ValueError("POSTGRESQL_USERNAME is not defined")
+        msg = "POSTGRESQL_USERNAME is not defined"
+        raise ValueError(msg)
 
     logging.basicConfig(
         level=(
@@ -126,14 +134,14 @@ if __name__ == "__main__":
         ldap_group_filter=ldap_group_filter,
         ldap_group_name_attr=os.getenv("LDAP_GROUP_NAME_ATTR", "cn"),
         ldap_host=ldap_host,
-        ldap_port=int(os.getenv("LDAP_PORT", 389)),
+        ldap_port=int(os.getenv("LDAP_PORT", "389")),
         ldap_user_base_dn=ldap_user_base_dn,
         ldap_user_filter=ldap_user_filter,
         ldap_user_name_attr=os.getenv("LDAP_USER_NAME_ATTR", "userPrincipalName"),
         postgresql_database_name=os.getenv("POSTGRESQL_DB_NAME", "guacamole"),
         postgresql_host_name=postgresql_host_name,
         postgresql_password=postgresql_password,
-        postgresql_port=int(os.getenv("POSTGRESQL_PORT", 5432)),
+        postgresql_port=int(os.getenv("POSTGRESQL_PORT", "5432")),
         postgresql_user_name=postgresql_user_name,
-        repeat_interval=int(os.getenv("REPEAT_INTERVAL", 300)),
+        repeat_interval=int(os.getenv("REPEAT_INTERVAL", "300")),
     )

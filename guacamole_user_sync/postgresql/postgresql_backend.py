@@ -1,32 +1,38 @@
 import logging
-from typing import Any, Type, TypeVar
+from dataclasses import dataclass
+from typing import Any, TypeVar
 
-from sqlalchemy import create_engine
-from sqlalchemy.engine import URL, Engine  # type:ignore
-from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import TextClause
+from sqlalchemy import URL, Engine, TextClause, create_engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import DeclarativeBase, Session
 
 logger = logging.getLogger("guacamole_user_sync")
 
-T = TypeVar("T")
+
+@dataclass
+class PostgreSQLConnectionDetails:
+    """Dataclass for holding PostgreSQL connection details."""
+
+    database_name: str
+    host_name: str
+    port: int
+    user_name: str
+    user_password: str
+
+
+T = TypeVar("T", bound=DeclarativeBase)
 
 
 class PostgreSQLBackend:
+    """Backend for connecting to a PostgreSQL database."""
+
     def __init__(
         self,
         *,
-        database_name: str,
-        host_name: str,
-        port: int,
-        user_name: str,
-        user_password: str,
+        connection_details: PostgreSQLConnectionDetails,
         session: Session | None = None,
-    ):
-        self.database_name = database_name
-        self.host_name = host_name
-        self.port = port
-        self.user_name = user_name
-        self.user_password = user_password
+    ) -> None:
+        self.connection_details = connection_details
         self._engine: Engine | None = None
         self._session = session
 
@@ -35,11 +41,11 @@ class PostgreSQLBackend:
         if not self._engine:
             url_object = URL.create(
                 "postgresql+psycopg",
-                username=self.user_name,
-                password=self.user_password,
-                host=self.host_name,
-                port=self.port,
-                database=self.database_name,
+                username=self.connection_details.user_name,
+                password=self.connection_details.user_password,
+                host=self.connection_details.host_name,
+                port=self.connection_details.port,
+                database=self.connection_details.database_name,
             )
             self._engine = create_engine(url_object, echo=False)
         return self._engine
@@ -50,29 +56,37 @@ class PostgreSQLBackend:
         return Session(self.engine)
 
     def add_all(self, items: list[T]) -> None:
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                session.add_all(items)
+        with self.session() as session, session.begin():
+            session.add_all(items)
 
-    def delete(self, table: Type[T], *filter_args: Any) -> None:
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                if filter_args:
-                    session.query(table).filter(*filter_args).delete()
-                else:
-                    session.query(table).delete()
+    def delete(
+        self,
+        table: type[T],
+        *filter_args: Any,  # noqa: ANN401
+    ) -> None:
+        with self.session() as session, session.begin():
+            if filter_args:
+                session.query(table).filter(*filter_args).delete()
+            else:
+                session.query(table).delete()
 
     def execute_commands(self, commands: list[TextClause]) -> None:
-        with self.session() as session:  # type:ignore
-            with session.begin():
+        try:
+            with self.session() as session, session.begin():
                 for command in commands:
                     session.execute(command)
+        except SQLAlchemyError:
+            logger.warning("Unable to execute PostgreSQL commands.")
+            raise
 
-    def query(self, table: Type[T], **filter_kwargs: Any) -> list[T]:
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                if filter_kwargs:
-                    result = session.query(table).filter_by(**filter_kwargs)
-                else:
-                    result = session.query(table)
-        return [item for item in result]
+    def query(
+        self,
+        table: type[T],
+        **filter_kwargs: Any,  # noqa: ANN401
+    ) -> list[T]:
+        with self.session() as session, session.begin():
+            if filter_kwargs:
+                result = session.query(table).filter_by(**filter_kwargs)
+            else:
+                result = session.query(table)
+        return list(result)
