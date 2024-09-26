@@ -1,7 +1,7 @@
 from typing import Any
 
 import ldap
-from sqlalchemy.sql.expression import TextClause
+from sqlalchemy import TextClause
 
 from guacamole_user_sync.models import LDAPSearchResult
 from guacamole_user_sync.postgresql.orm import GuacamoleBase

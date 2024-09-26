@@ -1,13 +1,8 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Integer, String
-from sqlalchemy.dialects.postgresql import BYTEA
-from sqlalchemy.orm import (  # type:ignore
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-)
+from sqlalchemy import DateTime, Enum, Integer, LargeBinary, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class GuacamoleEntityType(enum.Enum):
@@ -17,7 +12,7 @@ class GuacamoleEntityType(enum.Enum):
     USER_GROUP = "USER_GROUP"
 
 
-class GuacamoleBase(DeclarativeBase):  # type:ignore
+class GuacamoleBase(DeclarativeBase):  # type: ignore[misc]
     """Guacamole database base table."""
 
 
@@ -39,8 +34,8 @@ class GuacamoleUser(GuacamoleBase):
     user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     entity_id: Mapped[int] = mapped_column(Integer)
     full_name: Mapped[str] = mapped_column(String(256))
-    password_hash: Mapped[bytes] = mapped_column(BYTEA)
-    password_salt: Mapped[bytes] = mapped_column(BYTEA)
+    password_hash: Mapped[bytes] = mapped_column(LargeBinary)
+    password_salt: Mapped[bytes] = mapped_column(LargeBinary)
     password_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

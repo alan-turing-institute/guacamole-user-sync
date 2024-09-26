@@ -37,7 +37,6 @@ lint = [
     "black==24.8.0",
     "mypy==1.11.2",
     "ruff==0.6.2",
-    "types-SQLAlchemy==1.4.53.38",
 ]
 test = [
     "coverage[toml]==7.6.1",
@@ -95,6 +94,7 @@ strict = true                        # enable all optional error checking flags
 module = [
     "ldap.*",
     "pytest.*",
+    "sqlalchemy.*",
     "sqlparse.*",
 ]
 ignore_missing_imports = true
@@ -123,6 +123,7 @@ select = [
     "ISC", # flake8-implicit-str-concat
     "LOG", # flake8-logging
     "N",   # pep8-naming
+    "PGH", # pygrep-hooks
     "PIE", # flake8-pie
     "PT",  # flake8-pytest-style
     "PTH", # flake8-use-pathlib

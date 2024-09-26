@@ -3,14 +3,12 @@ from typing import Any, ClassVar
 from unittest import mock
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import URL, Engine, text
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg
-from sqlalchemy.engine import URL, Engine  # type: ignore
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
-from sqlalchemy.pool.impl import QueuePool
-from sqlalchemy.sql.elements import BinaryExpression
-from sqlalchemy.sql.expression import TextClause
+from sqlalchemy.pool import QueuePool
+from sqlalchemy.sql.elements import BinaryExpression, TextClause
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
@@ -62,7 +60,7 @@ class TestPostgreSQLBackend:
         assert isinstance(backend.engine.url, URL)
         assert backend.engine.logging_name is None
         assert not backend.engine.echo
-        assert not backend.engine.hide_parameters  # type: ignore
+        assert not backend.engine.hide_parameters
 
     def test_session(self) -> None:
         backend = self.mock_backend()
@@ -438,7 +436,7 @@ class TestPostgreSQLClient:
             raise OperationalError(statement="statement", params=None, orig=None)
 
         mock_backend = MockPostgreSQLBackend()
-        mock_backend.execute_commands = execute_commands_exception  # type: ignore
+        mock_backend.execute_commands = execute_commands_exception  # type: ignore[method-assign]
 
         # Patch PostgreSQLBackend
         with mock.patch(

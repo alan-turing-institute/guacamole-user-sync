@@ -3,8 +3,7 @@ from enum import StrEnum
 from pathlib import Path
 
 import sqlparse
-from sqlalchemy import text
-from sqlalchemy.sql.expression import TextClause
+from sqlalchemy import TextClause, text
 
 logger = logging.getLogger("guacamole_user_sync")
 

@@ -1,15 +1,11 @@
 import logging
-from typing import Any, TypeVar
+from typing import Any
 
-from sqlalchemy import create_engine
-from sqlalchemy.engine import URL, Engine  # type:ignore
+from sqlalchemy import URL, Engine, TextClause, create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import TextClause
+from sqlalchemy.orm import DeclarativeBase, Session
 
 logger = logging.getLogger("guacamole_user_sync")
-
-T = TypeVar("T")
 
 
 class PostgreSQLBackend:
@@ -52,12 +48,16 @@ class PostgreSQLBackend:
             return self._session
         return Session(self.engine)
 
-    def add_all(self, items: list[T]) -> None:
-        with self.session() as session, session.begin():  # type:ignore
+    def add_all(self, items: list[DeclarativeBase]) -> None:
+        with self.session() as session, session.begin():
             session.add_all(items)
 
-    def delete(self, table: type[T], *filter_args: Any) -> None:  # noqa: ANN401
-        with self.session() as session, session.begin():  # type:ignore
+    def delete(
+        self,
+        table: type[DeclarativeBase],
+        *filter_args: Any,  # noqa: ANN401
+    ) -> None:
+        with self.session() as session, session.begin():
             if filter_args:
                 session.query(table).filter(*filter_args).delete()
             else:
@@ -65,15 +65,19 @@ class PostgreSQLBackend:
 
     def execute_commands(self, commands: list[TextClause]) -> None:
         try:
-            with self.session() as session, session.begin():  # type:ignore
+            with self.session() as session, session.begin():
                 for command in commands:
                     session.execute(command)
         except SQLAlchemyError:
             logger.warning("Unable to execute PostgreSQL commands.")
             raise
 
-    def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
-        with self.session() as session, session.begin():  # type:ignore
+    def query(
+        self,
+        table: type[DeclarativeBase],
+        **filter_kwargs: Any,  # noqa: ANN401
+    ) -> list[DeclarativeBase]:
+        with self.session() as session, session.begin():
             if filter_kwargs:
                 result = session.query(table).filter_by(**filter_kwargs)
             else:
