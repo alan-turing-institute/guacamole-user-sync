@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import SQLAlchemyError
 
 from guacamole_user_sync.models import (
+    GuacamoleUserDetails,
     LDAPGroup,
     LDAPUser,
     PostgreSQLError,
@@ -60,27 +61,27 @@ class PostgreSQLClient:
             logger.debug("Working on group '%s'", group.name)
             # Get the user_group_id for each group (via looking up the entity_id)
             try:
-                group_entity_id = [
+                group_entity_id = next(
                     item.entity_id
                     for item in self.backend.query(
                         GuacamoleEntity,
                         name=group.name,
                         type=GuacamoleEntityType.USER_GROUP,
                     )
-                ][0]
-                user_group_id = [
+                )
+                user_group_id = next(
                     item.user_group_id
                     for item in self.backend.query(
                         GuacamoleUserGroup,
                         entity_id=group_entity_id,
                     )
-                ][0]
+                )
                 logger.debug(
                     "-> entity_id: %s; user_group_id: %s",
                     group_entity_id,
                     user_group_id,
                 )
-            except IndexError:
+            except StopIteration:
                 logger.debug(
                     "Could not determine user_group_id for group '%s'.",
                     group.name,
@@ -94,20 +95,20 @@ class PostgreSQLClient:
                     logger.debug("Could not find LDAP user with UID %s", user_uid)
                     continue
                 try:
-                    user_entity_id = [
+                    user_entity_id = next(
                         item.entity_id
                         for item in self.backend.query(
                             GuacamoleEntity,
                             name=user.name,
                             type=GuacamoleEntityType.USER,
                         )
-                    ][0]
+                    )
                     logger.debug(
                         "... group member '%s' has entity_id '%s'",
                         user,
                         user_entity_id,
                     )
-                except IndexError:
+                except StopIteration:
                     logger.debug(
                         "Could not find entity ID for LDAP user '%s'",
                         user_uid,
@@ -284,28 +285,33 @@ class PostgreSQLClient:
             "There are %s user entit(y|ies) currently registered",
             len(current_user_entity_ids),
         )
-        new_user_tuples: list[tuple[int, LDAPUser]] = [
-            (user.entity_id, [u for u in users if u.name == user.name][0])
-            for user in self.backend.query(
-                GuacamoleEntity,
-                type=GuacamoleEntityType.USER,
-            )
-            if user.entity_id not in current_user_entity_ids
-        ]
-        logger.debug(
-            "... %s user entit(y|ies) will be added",
-            len(current_user_entity_ids),
+        user_entities = self.backend.query(
+            GuacamoleEntity,
+            type=GuacamoleEntityType.USER,
         )
+        new_users = [
+            GuacamoleUserDetails(
+                entity_id=entity.entity_id,
+                full_name=user.display_name,
+                name=user.name,
+            )
+            for user in users
+            for entity in user_entities
+            if entity.name == user.name
+            and entity.entity_id not in current_user_entity_ids
+        ]
+        logger.debug("... %s user entit(y|ies) will be added", len(new_users))
+
         self.backend.add_all(
             [
                 GuacamoleUser(
-                    entity_id=user_tuple[0],
-                    full_name=user_tuple[1].display_name,
+                    entity_id=new_user.entity_id,
+                    full_name=new_user.full_name,
                     password_date=datetime.now(tz=UTC),
                     password_hash=secrets.token_bytes(32),
                     password_salt=secrets.token_bytes(32),
                 )
-                for user_tuple in new_user_tuples
+                for new_user in new_users
             ],
         )
         # Clean up any unused entries

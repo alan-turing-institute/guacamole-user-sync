@@ -37,8 +37,8 @@ class MockAsyncSearchList:
 
     def startSearch(  # noqa: N802
         self,
-        *args: Any,  #  noqa: ANN401, ARG002
-        **kwargs: Any,  # noqa: ANN401, ARG002
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
         pass
 
@@ -78,7 +78,7 @@ class MockPostgreSQLBackend:
             self.contents[cls] = []
         self.contents[cls] += items
 
-    def delete(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401, ARG001
+    def delete(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         pass
 
     def execute_commands(self, commands: list[TextClause]) -> None:

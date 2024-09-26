@@ -494,7 +494,7 @@ class TestPostgreSQLClient:
                 "... 3 user group entit(y|ies) will be added",
                 "There are 3 valid user group entit(y|ies)",
                 "There are 0 user entit(y|ies) currently registered",
-                "... 0 user entit(y|ies) will be added",
+                "... 2 user entit(y|ies) will be added",
                 "There are 2 valid user entit(y|ies)",
                 "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
                 "Working on group 'defendants'",

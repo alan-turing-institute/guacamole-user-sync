@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 from sqlalchemy import URL, Engine, TextClause, create_engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,6 +18,9 @@ class PostgreSQLConnectionDetails:
     port: int
     user_name: str
     user_password: str
+
+
+T = TypeVar("T", bound=DeclarativeBase)
 
 
 class PostgreSQLBackend:
@@ -52,13 +55,13 @@ class PostgreSQLBackend:
             return self._session
         return Session(self.engine)
 
-    def add_all(self, items: list[DeclarativeBase]) -> None:
+    def add_all(self, items: list[T]) -> None:
         with self.session() as session, session.begin():
             session.add_all(items)
 
     def delete(
         self,
-        table: type[DeclarativeBase],
+        table: type[T],
         *filter_args: Any,  # noqa: ANN401
     ) -> None:
         with self.session() as session, session.begin():
@@ -78,9 +81,9 @@ class PostgreSQLBackend:
 
     def query(
         self,
-        table: type[DeclarativeBase],
+        table: type[T],
         **filter_kwargs: Any,  # noqa: ANN401
-    ) -> list[DeclarativeBase]:
+    ) -> list[T]:
         with self.session() as session, session.begin():
             if filter_kwargs:
                 result = session.query(table).filter_by(**filter_kwargs)
