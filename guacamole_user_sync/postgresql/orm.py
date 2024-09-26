@@ -20,8 +20,6 @@ class GuacamoleEntityType(enum.Enum):
 class GuacamoleBase(DeclarativeBase):  # type:ignore
     """Guacamole database base table."""
 
-    pass
-
 
 class GuacamoleEntity(GuacamoleBase):
     """Guacamole database GuacamoleEntity table."""
