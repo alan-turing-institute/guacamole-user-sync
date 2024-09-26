@@ -207,7 +207,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_fixture,
             postgresql_model_guacamoleusergroup_fixture,
         )
@@ -243,7 +243,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_fixture,
             postgresql_model_guacamoleusergroup_fixture,
         )
@@ -279,7 +279,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_user_fixture[1:],
             postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleusergroup_fixture,
@@ -314,7 +314,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_fixture,
             postgresql_model_guacamoleusergroup_fixture[1:],
         )
@@ -343,7 +343,7 @@ class TestPostgreSQLClient:
 
     def test_ensure_schema(self, capsys: pytest.CaptureFixture) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()  # type: ignore
+        mock_backend = MockPostgreSQLBackend()
 
         # Patch PostgreSQLBackend
         with mock.patch(
@@ -430,12 +430,14 @@ class TestPostgreSQLClient:
                     f"Executing CREATE INDEX IF NOT EXISTS {index_name}" in captured.out
                 )
 
-    def test_ensure_schema_exception(self, capsys: pytest.CaptureFixture) -> None:
+    def test_ensure_schema_exception(self) -> None:
         # Create a mock backend
-        def execute_commands_exception(commands: list[TextClause]) -> None:
+        def execute_commands_exception(
+            commands: list[TextClause],  # noqa: ARG001
+        ) -> None:
             raise OperationalError(statement="statement", params=None, orig=None)
 
-        mock_backend = MockPostgreSQLBackend()  # type: ignore
+        mock_backend = MockPostgreSQLBackend()
         mock_backend.execute_commands = execute_commands_exception  # type: ignore
 
         # Patch PostgreSQLBackend
@@ -458,7 +460,7 @@ class TestPostgreSQLClient:
         ldap_model_users_fixture: list[LDAPUser],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend()  # type: ignore
+        mock_backend = MockPostgreSQLBackend()
 
         # Capture logs at debug level and above
         caplog.set_level(logging.DEBUG)
@@ -511,7 +513,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleusergroup_fixture[0:1],
         )
@@ -541,7 +543,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_user_group_fixture[0:1],
             [
                 GuacamoleEntity(
@@ -576,7 +578,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_user_fixture,
             postgresql_model_guacamoleuser_fixture[0:1],
         )
@@ -606,7 +608,7 @@ class TestPostgreSQLClient:
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
     ) -> None:
         # Create a mock backend
-        mock_backend = MockPostgreSQLBackend(  # type: ignore
+        mock_backend = MockPostgreSQLBackend(
             postgresql_model_guacamoleentity_user_fixture[0:1],
             [
                 GuacamoleEntity(

@@ -1,9 +1,10 @@
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 import ldap
 from sqlalchemy.sql.expression import TextClause
 
 from guacamole_user_sync.models import LDAPSearchResult
+from guacamole_user_sync.postgresql.orm import GuacamoleBase
 
 
 class MockLDAPObject:
@@ -28,16 +29,24 @@ class MockAsyncSearchList:
         self,
         partial: bool,  # noqa: FBT001
         results: LDAPSearchResult,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
+        *args: Any,  # noqa: ANN401, ARG002
+        **kwargs: Any,  # noqa: ANN401, ARG002
     ) -> None:
         self.allResults = results
         self.partial = partial
 
-    def startSearch(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401, N802
+    def startSearch(  # noqa: N802
+        self,
+        *args: Any,  #  noqa: ANN401, ARG002
+        **kwargs: Any,  # noqa: ANN401, ARG002
+    ) -> None:
         pass
 
-    def processResults(self, *args: Any, **kwargs: Any) -> bool:  # noqa: ANN401, N802
+    def processResults(  # noqa: N802
+        self,
+        *args: Any,  # noqa: ANN401, ARG002
+        **kwargs: Any,  # noqa: ANN401, ARG002
+    ) -> bool:
         return self.partial
 
 
@@ -55,44 +64,45 @@ class MockAsyncSearchListPartialResults(MockAsyncSearchList):
         super().__init__(results=results, partial=True)
 
 
-T = TypeVar("T")
-
-
-class MockPostgreSQLBackend(Generic[T]):
+class MockPostgreSQLBackend:
     """Mock PostgreSQLBackend."""
 
-    def __init__(self, *data_lists: Any, **kwargs: Any) -> None:  # noqa: ANN401
-        self.contents: dict[type[T], list[T]] = {}
+    def __init__(self, *data_lists: Any, **kwargs: Any) -> None:  # noqa: ANN401, ARG002
+        self.contents: dict[type[GuacamoleBase], list[GuacamoleBase]] = {}
         for data_list in data_lists:
             self.add_all(data_list)
 
-    def add_all(self, items: list[T]) -> None:
+    def add_all(self, items: list[GuacamoleBase]) -> None:
         cls = type(items[0])
         if cls not in self.contents:
             self.contents[cls] = []
         self.contents[cls] += items
 
-    def delete(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+    def delete(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401, ARG001
         pass
 
     def execute_commands(self, commands: list[TextClause]) -> None:
         for command in commands:
             print(f"Executing {command}")  # noqa: T201
 
-    def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
+    def query(
+        self,
+        table: type[GuacamoleBase],
+        **filter_kwargs: Any,  # noqa: ANN401
+    ) -> list[GuacamoleBase]:
         if table not in self.contents:
             self.contents[table] = []
         results = list(self.contents[table])
 
         if "entity_id" in filter_kwargs:
             results = [
-                item for item in results if item.entity_id == filter_kwargs["entity_id"]  # type: ignore
+                item for item in results if item.entity_id == filter_kwargs["entity_id"]
             ]
 
         if "name" in filter_kwargs:
-            results = [item for item in results if item.name == filter_kwargs["name"]]  # type: ignore
+            results = [item for item in results if item.name == filter_kwargs["name"]]
 
         if "type" in filter_kwargs:
-            results = [item for item in results if item.type == filter_kwargs["type"]]  # type: ignore
+            results = [item for item in results if item.type == filter_kwargs["type"]]
 
         return results

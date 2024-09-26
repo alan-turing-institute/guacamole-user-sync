@@ -79,7 +79,7 @@ class TestLDAPClient:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        def mock_raise_server_down(*args: Any) -> None:  # noqa: ANN401
+        def mock_raise_server_down(*args: Any) -> None:  # noqa: ANN401, ARG001
             raise ldap.SERVER_DOWN
 
         monkeypatch.setattr(
@@ -97,7 +97,7 @@ class TestLDAPClient:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        def mock_raise_sizelimit_exceeded(*args: Any) -> None:  # noqa: ANN401
+        def mock_raise_sizelimit_exceeded(*args: Any) -> None:  # noqa: ANN401, ARG001
             raise ldap.SIZELIMIT_EXCEEDED
 
         monkeypatch.setattr(
@@ -132,7 +132,7 @@ class TestLDAPClient:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        def mock_raise_no_results(*args: Any) -> None:  # noqa: ANN401
+        def mock_raise_no_results(*args: Any) -> None:  # noqa: ANN401, ARG001
             raise ldap.NO_SUCH_OBJECT
 
         monkeypatch.setattr(ldap.asyncsearch.List, "startSearch", mock_raise_no_results)
