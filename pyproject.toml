@@ -125,6 +125,7 @@ select = [
     "PT",  # flake8-pytest-style
     "PYI", # flake8-pyi
     "Q",   # flake8-quotes
+    "RET", # flake8-return
     "RSE", # flake8-rse
     "S",   # flake8-bandit
     "T20", # flake8-print
