@@ -32,7 +32,7 @@ class LDAPClient:
 
     def connect(self) -> LDAPObject:
         if not self.cnxn:
-            logger.info(f"Initialising connection to LDAP host at {self.hostname}")
+            logger.info("Initialising connection to LDAP host at %s", self.hostname)
             self.cnxn = ldap.initialize(f"ldap://{self.hostname}")
             if self.bind_dn:
                 try:
@@ -57,7 +57,7 @@ class LDAPClient:
                     name=attr_dict[query.id_attr][0].decode("utf-8"),
                 ),
             )
-        logger.debug(f"Loaded {len(output)} LDAP groups")
+        logger.debug("Loaded %s LDAP groups", len(output))
         return output
 
     def search_users(self, query: LDAPQuery) -> list[LDAPUser]:
@@ -74,14 +74,14 @@ class LDAPClient:
                     uid=attr_dict["uid"][0].decode("utf-8"),
                 ),
             )
-        logger.debug(f"Loaded {len(output)} LDAP users")
+        logger.debug("Loaded %s LDAP users", len(output))
         return output
 
     def search(self, query: LDAPQuery) -> LDAPSearchResult:
         results: LDAPSearchResult = []
         logger.info("Querying LDAP host with:")
-        logger.info(f"... base DN: {query.base_dn}")
-        logger.info(f"... filter: {query.filter}")
+        logger.info("... base DN: %s", query.base_dn)
+        logger.info("... filter: %s", query.filter)
         searcher = AsyncSearchList(self.connect())
         try:
             searcher.startSearch(
@@ -92,7 +92,7 @@ class LDAPClient:
             if searcher.processResults() != 0:
                 logger.warning("Only partial results received.")
             results = searcher.allResults
-            logger.debug(f"Server returned {len(results)} results.")
+            logger.debug("Server returned %s results.", len(results))
             return results
         except ldap.NO_SUCH_OBJECT as exc:
             logger.warning("Server returned no results.")

@@ -301,7 +301,7 @@ class TestPostgreSQLClient:
             )
 
             for output_line in (
-                "Could not find entity ID for LDAP user aulus.agerius",
+                "Could not find entity ID for LDAP user 'aulus.agerius'",
             ):
                 assert output_line in caplog.text
 

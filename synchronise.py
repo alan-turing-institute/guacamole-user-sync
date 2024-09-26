@@ -61,7 +61,7 @@ def main(
         )
 
         # Wait before repeating
-        logger.info(f"Waiting {repeat_interval} seconds.")
+        logger.info("Waiting %s seconds.", repeat_interval)
         time.sleep(repeat_interval)
 
 

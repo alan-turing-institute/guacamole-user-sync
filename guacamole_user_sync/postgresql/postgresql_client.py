@@ -49,12 +49,13 @@ class PostgreSQLClient:
         users: list[LDAPUser],
     ) -> None:
         logger.info(
-            f"Ensuring that {len(users)} user(s)"
-            f" are correctly assigned among {len(groups)} group(s)",
+            "Ensuring that %s user(s) are correctly assigned among %s group(s)",
+            len(users),
+            len(groups),
         )
         user_group_members = []
         for group in groups:
-            logger.debug(f"Working on group '{group.name}'")
+            logger.debug("Working on group '%s'", group.name)
             # Get the user_group_id for each group (via looking up the entity_id)
             try:
                 group_entity_id = [
@@ -73,11 +74,14 @@ class PostgreSQLClient:
                     )
                 ][0]
                 logger.debug(
-                    f"-> entity_id: {group_entity_id}; user_group_id: {user_group_id}",
+                    "-> entity_id: %s; user_group_id: %s",
+                    group_entity_id,
+                    user_group_id,
                 )
             except IndexError:
                 logger.debug(
-                    f"Could not determine user_group_id for group '{group.name}'.",
+                    "Could not determine user_group_id for group '%s'.",
+                    group.name,
                 )
                 continue
             # Get the user_entity_id for each user belonging to this group
@@ -85,7 +89,7 @@ class PostgreSQLClient:
                 try:
                     user = next(filter(lambda u: u.uid == user_uid, users))
                 except StopIteration:
-                    logger.debug(f"Could not find LDAP user with UID {user_uid}")
+                    logger.debug("Could not find LDAP user with UID %s", user_uid)
                     continue
                 try:
                     user_entity_id = [
@@ -97,10 +101,15 @@ class PostgreSQLClient:
                         )
                     ][0]
                     logger.debug(
-                        f"... group member '{user}' has entity_id '{user_entity_id}'",
+                        "... group member '%s' has entity_id '%s'",
+                        user,
+                        user_entity_id,
                     )
                 except IndexError:
-                    logger.debug(f"Could not find entity ID for LDAP user {user_uid}")
+                    logger.debug(
+                        "Could not find entity ID for LDAP user '%s'",
+                        user_uid,
+                    )
                     continue
                 # Create an entry in the user group member table
                 user_group_members.append(
@@ -110,7 +119,10 @@ class PostgreSQLClient:
                     ),
                 )
         # Clear existing assignments then reassign
-        logger.debug(f"... creating {len(user_group_members)} user/group assignments.")
+        logger.debug(
+            "... creating %s user/group assignments.",
+            len(user_group_members),
+        )
         self.backend.delete(GuacamoleUserGroupMember)
         self.backend.add_all(user_group_members)
 
@@ -132,7 +144,7 @@ class PostgreSQLClient:
     def update_groups(self, groups: list[LDAPGroup]) -> None:
         """Update the entities table with desired groups."""
         # Set groups to desired list
-        logger.info(f"Ensuring that {len(groups)} group(s) are registered")
+        logger.info("Ensuring that %s group(s) are registered", len(groups))
         desired_group_names = [group.name for group in groups]
         current_group_names = [
             item.name
@@ -143,14 +155,15 @@ class PostgreSQLClient:
         ]
         # Add groups
         logger.debug(
-            f"There are {len(current_group_names)} group(s) currently registered",
+            "There are %s group(s) currently registered",
+            len(current_group_names),
         )
         group_names_to_add = [
             group_name
             for group_name in desired_group_names
             if group_name not in current_group_names
         ]
-        logger.debug(f"... {len(group_names_to_add)} group(s) will be added")
+        logger.debug("... %s group(s) will be added", len(group_names_to_add))
         self.backend.add_all(
             [
                 GuacamoleEntity(name=group_name, type=GuacamoleEntityType.USER_GROUP)
@@ -163,7 +176,7 @@ class PostgreSQLClient:
             for group_name in current_group_names
             if group_name not in desired_group_names
         ]
-        logger.debug(f"... {len(group_names_to_remove)} group(s) will be removed")
+        logger.debug("... %s group(s) will be removed", len(group_names_to_remove))
         for group_name in group_names_to_remove:
             self.backend.delete(
                 GuacamoleEntity,
@@ -177,8 +190,8 @@ class PostgreSQLClient:
             group.entity_id for group in self.backend.query(GuacamoleUserGroup)
         ]
         logger.debug(
-            f"There are {len(current_user_group_entity_ids)}"
-            " user group entit(y|ies) currently registered",
+            "There are %s user group entit(y|ies) currently registered",
+            len(current_user_group_entity_ids),
         )
         new_group_entity_ids = [
             group.entity_id
@@ -189,7 +202,8 @@ class PostgreSQLClient:
             if group.entity_id not in current_user_group_entity_ids
         ]
         logger.debug(
-            f"... {len(new_group_entity_ids)} user group entit(y|ies) will be added",
+            "... %s user group entit(y|ies) will be added",
+            len(new_group_entity_ids),
         )
         self.backend.add_all(
             [
@@ -207,7 +221,10 @@ class PostgreSQLClient:
                 type=GuacamoleEntityType.USER_GROUP,
             )
         ]
-        logger.debug(f"There are {len(valid_entity_ids)} valid user group entit(y|ies)")
+        logger.debug(
+            "There are %s valid user group entit(y|ies)",
+            len(valid_entity_ids),
+        )
         self.backend.delete(
             GuacamoleUserGroup,
             GuacamoleUserGroup.entity_id.not_in(valid_entity_ids),
@@ -216,7 +233,7 @@ class PostgreSQLClient:
     def update_users(self, users: list[LDAPUser]) -> None:
         """Update the entities table with desired users."""
         # Set users to desired list
-        logger.info(f"Ensuring that {len(users)} user(s) are registered")
+        logger.info("Ensuring that %s user(s) are registered", len(users))
         desired_usernames = [user.name for user in users]
         current_usernames = [
             user.name
@@ -226,13 +243,16 @@ class PostgreSQLClient:
             )
         ]
         # Add users
-        logger.debug(f"There are {len(current_usernames)} user(s) currently registered")
+        logger.debug(
+            "There are %s user(s) currently registered",
+            len(current_usernames),
+        )
         usernames_to_add = [
             username
             for username in desired_usernames
             if username not in current_usernames
         ]
-        logger.debug(f"... {len(usernames_to_add)} user(s) will be added")
+        logger.debug("... %s user(s) will be added", len(usernames_to_add))
         self.backend.add_all(
             [
                 GuacamoleEntity(name=username, type=GuacamoleEntityType.USER)
@@ -245,7 +265,7 @@ class PostgreSQLClient:
             for username in current_usernames
             if username not in desired_usernames
         ]
-        logger.debug(f"... {len(usernames_to_remove)} user(s) will be removed")
+        logger.debug("... %s user(s) will be removed", len(usernames_to_remove))
         for username in usernames_to_remove:
             self.backend.delete(
                 GuacamoleEntity,
@@ -259,8 +279,8 @@ class PostgreSQLClient:
             user.entity_id for user in self.backend.query(GuacamoleUser)
         ]
         logger.debug(
-            f"There are {len(current_user_entity_ids)} "
-            "user entit(y|ies) currently registered",
+            "There are %s user entit(y|ies) currently registered",
+            len(current_user_entity_ids),
         )
         new_user_tuples: list[tuple[int, LDAPUser]] = [
             (user.entity_id, [u for u in users if u.name == user.name][0])
@@ -271,7 +291,8 @@ class PostgreSQLClient:
             if user.entity_id not in current_user_entity_ids
         ]
         logger.debug(
-            f"... {len(current_user_entity_ids)} user entit(y|ies) will be added",
+            "... %s user entit(y|ies) will be added",
+            len(current_user_entity_ids),
         )
         self.backend.add_all(
             [
@@ -293,7 +314,7 @@ class PostgreSQLClient:
                 type=GuacamoleEntityType.USER,
             )
         ]
-        logger.debug(f"There are {len(valid_entity_ids)} valid user entit(y|ies)")
+        logger.debug("There are %s valid user entit(y|ies)", len(valid_entity_ids))
         self.backend.delete(
             GuacamoleUser,
             GuacamoleUser.entity_id.not_in(valid_entity_ids),

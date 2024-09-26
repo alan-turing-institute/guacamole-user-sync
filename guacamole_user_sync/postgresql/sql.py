@@ -20,7 +20,7 @@ class GuacamoleSchema:
 
     @classmethod
     def commands(cls, schema_version: SchemaVersion) -> list[TextClause]:
-        logger.info(f"Ensuring correct schema for Guacamole {schema_version.value}")
+        logger.info("Ensuring correct schema for Guacamole %s", schema_version.value)
         commands = []
         sql_file_path = Path(__file__).with_name(
             f"guacamole_schema.{schema_version.value}.sql",
@@ -37,7 +37,7 @@ class GuacamoleSchema:
                 if isinstance(token, sqlparse.sql.Comment)
             ]
             if first_comment := next(filter(lambda item: item, comment_lines), None):
-                logger.debug(f"... {first_comment}")
+                logger.debug("... %s", first_comment)
             # Extract the command
             commands.append(
                 text(sqlparse.format(statement, strip_comments=True, compact=True)),
