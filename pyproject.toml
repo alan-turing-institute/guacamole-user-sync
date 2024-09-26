@@ -128,6 +128,7 @@ select = [
     "RET", # flake8-return
     "RSE", # flake8-rse
     "S",   # flake8-bandit
+    "SLF", # flake8-self
     "T20", # flake8-print
     "UP",  # pyupgrade
     "W",   # pycodestyle warnings
