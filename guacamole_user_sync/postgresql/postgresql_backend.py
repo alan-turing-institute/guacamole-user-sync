@@ -53,33 +53,29 @@ class PostgreSQLBackend:
         return Session(self.engine)
 
     def add_all(self, items: list[T]) -> None:
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                session.add_all(items)
+        with self.session() as session, session.begin():  # type:ignore
+            session.add_all(items)
 
     def delete(self, table: type[T], *filter_args: Any) -> None:  # noqa: ANN401
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                if filter_args:
-                    session.query(table).filter(*filter_args).delete()
-                else:
-                    session.query(table).delete()
+        with self.session() as session, session.begin():  # type:ignore
+            if filter_args:
+                session.query(table).filter(*filter_args).delete()
+            else:
+                session.query(table).delete()
 
     def execute_commands(self, commands: list[TextClause]) -> None:
         try:
-            with self.session() as session:  # type:ignore
-                with session.begin():
-                    for command in commands:
-                        session.execute(command)
+            with self.session() as session, session.begin():  # type:ignore
+                for command in commands:
+                    session.execute(command)
         except SQLAlchemyError:
             logger.warning("Unable to execute PostgreSQL commands.")
             raise
 
     def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
-        with self.session() as session:  # type:ignore
-            with session.begin():
-                if filter_kwargs:
-                    result = session.query(table).filter_by(**filter_kwargs)
-                else:
-                    result = session.query(table)
+        with self.session() as session, session.begin():  # type:ignore
+            if filter_kwargs:
+                result = session.query(table).filter_by(**filter_kwargs)
+            else:
+                result = session.query(table)
         return list(result)
