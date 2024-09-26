@@ -77,7 +77,7 @@ class MockPostgreSQLBackend(Generic[T]):
 
     def execute_commands(self, commands: list[TextClause]) -> None:
         for command in commands:
-            print(f"Executing {command}")
+            print(f"Executing {command}")  # noqa: T201
 
     def query(self, table: type[T], **filter_kwargs: Any) -> list[T]:  # noqa: ANN401
         if table not in self.contents:
