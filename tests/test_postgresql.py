@@ -11,7 +11,11 @@ from sqlalchemy.pool import QueuePool
 from sqlalchemy.sql.elements import BinaryExpression, TextClause
 
 from guacamole_user_sync.models import LDAPGroup, LDAPUser, PostgreSQLError
-from guacamole_user_sync.postgresql import PostgreSQLBackend, PostgreSQLClient
+from guacamole_user_sync.postgresql import (
+    PostgreSQLBackend,
+    PostgreSQLClient,
+    PostgreSQLConnectionDetails,
+)
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
     GuacamoleEntityType,
@@ -28,11 +32,13 @@ class TestPostgreSQLBackend:
 
     def mock_backend(self, session: Session | None = None) -> PostgreSQLBackend:
         return PostgreSQLBackend(
-            database_name="database_name",
-            host_name="host_name",
-            port=1234,
-            user_name="user_name",
-            user_password="user_password",  # noqa: S106
+            connection_details=PostgreSQLConnectionDetails(
+                database_name="database_name",
+                host_name="host_name",
+                port=1234,
+                user_name="user_name",
+                user_password="user_password",  # noqa: S106
+            ),
             session=session,
         )
 
@@ -46,11 +52,12 @@ class TestPostgreSQLBackend:
     def test_constructor(self) -> None:
         backend = self.mock_backend()
         assert isinstance(backend, PostgreSQLBackend)
-        assert backend.database_name == "database_name"
-        assert backend.host_name == "host_name"
-        assert backend.port == 1234
-        assert backend.user_name == "user_name"
-        assert backend.user_password == "user_password"  # noqa: S105
+        assert isinstance(backend.connection_details, PostgreSQLConnectionDetails)
+        assert backend.connection_details.database_name == "database_name"
+        assert backend.connection_details.host_name == "host_name"
+        assert backend.connection_details.port == 1234  # noqa: PLR2004
+        assert backend.connection_details.user_name == "user_name"
+        assert backend.connection_details.user_password == "user_password"  # noqa: S105
 
     def test_engine(self) -> None:
         backend = self.mock_backend()
@@ -267,7 +274,7 @@ class TestPostgreSQLClient:
             ):
                 assert output_line in caplog.text
 
-    def test_assign_users_to_groups_missing_user_entity(
+    def test_assign_users_to_groups_missing_user_entity(  # noqa: PLR0913
         self,
         caplog: pytest.LogCaptureFixture,
         ldap_model_groups_fixture: list[LDAPGroup],

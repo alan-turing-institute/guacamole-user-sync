@@ -17,7 +17,7 @@ from .orm import (
     GuacamoleUserGroup,
     GuacamoleUserGroupMember,
 )
-from .postgresql_backend import PostgreSQLBackend
+from .postgresql_backend import PostgreSQLBackend, PostgreSQLConnectionDetails
 from .sql import GuacamoleSchema, SchemaVersion
 
 logger = logging.getLogger("guacamole_user_sync")
@@ -36,11 +36,13 @@ class PostgreSQLClient:
         user_password: str,
     ) -> None:
         self.backend = PostgreSQLBackend(
-            database_name=database_name,
-            host_name=host_name,
-            port=port,
-            user_name=user_name,
-            user_password=user_password,
+            connection_details=PostgreSQLConnectionDetails(
+                database_name=database_name,
+                host_name=host_name,
+                port=port,
+                user_name=user_name,
+                user_password=user_password,
+            ),
         )
 
     def assign_users_to_groups(

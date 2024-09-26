@@ -8,7 +8,7 @@ from guacamole_user_sync.models import LDAPError, LDAPQuery, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
 
-def main(
+def main(  # noqa: PLR0913
     ldap_bind_dn: str | None,
     ldap_bind_password: str | None,
     ldap_group_base_dn: str,
@@ -134,14 +134,14 @@ if __name__ == "__main__":
         ldap_group_filter=ldap_group_filter,
         ldap_group_name_attr=os.getenv("LDAP_GROUP_NAME_ATTR", "cn"),
         ldap_host=ldap_host,
-        ldap_port=int(os.getenv("LDAP_PORT", 389)),
+        ldap_port=int(os.getenv("LDAP_PORT", "389")),
         ldap_user_base_dn=ldap_user_base_dn,
         ldap_user_filter=ldap_user_filter,
         ldap_user_name_attr=os.getenv("LDAP_USER_NAME_ATTR", "userPrincipalName"),
         postgresql_database_name=os.getenv("POSTGRESQL_DB_NAME", "guacamole"),
         postgresql_host_name=postgresql_host_name,
         postgresql_password=postgresql_password,
-        postgresql_port=int(os.getenv("POSTGRESQL_PORT", 5432)),
+        postgresql_port=int(os.getenv("POSTGRESQL_PORT", "5432")),
         postgresql_user_name=postgresql_user_name,
-        repeat_interval=int(os.getenv("REPEAT_INTERVAL", 300)),
+        repeat_interval=int(os.getenv("REPEAT_INTERVAL", "300")),
     )

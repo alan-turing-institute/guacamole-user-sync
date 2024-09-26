@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import URL, Engine, TextClause, create_engine
@@ -8,24 +9,27 @@ from sqlalchemy.orm import DeclarativeBase, Session
 logger = logging.getLogger("guacamole_user_sync")
 
 
+@dataclass
+class PostgreSQLConnectionDetails:
+    """Dataclass for holding PostgreSQL connection details."""
+
+    database_name: str
+    host_name: str
+    port: int
+    user_name: str
+    user_password: str
+
+
 class PostgreSQLBackend:
     """Backend for connecting to a PostgreSQL database."""
 
     def __init__(
         self,
         *,
-        database_name: str,
-        host_name: str,
-        port: int,
-        user_name: str,
-        user_password: str,
+        connection_details: PostgreSQLConnectionDetails,
         session: Session | None = None,
     ) -> None:
-        self.database_name = database_name
-        self.host_name = host_name
-        self.port = port
-        self.user_name = user_name
-        self.user_password = user_password
+        self.connection_details = connection_details
         self._engine: Engine | None = None
         self._session = session
 
@@ -34,11 +38,11 @@ class PostgreSQLBackend:
         if not self._engine:
             url_object = URL.create(
                 "postgresql+psycopg",
-                username=self.user_name,
-                password=self.user_password,
-                host=self.host_name,
-                port=self.port,
-                database=self.database_name,
+                username=self.connection_details.user_name,
+                password=self.connection_details.user_password,
+                host=self.connection_details.host_name,
+                port=self.connection_details.port,
+                database=self.connection_details.database_name,
             )
             self._engine = create_engine(url_object, echo=False)
         return self._engine
