@@ -77,7 +77,8 @@ class PostgreSQLClient:
                     )
                 )
                 logger.debug(
-                    "-> entity_id: %s; user_group_id: %s",
+                    "Group '%s' has entity_id: %s and user_group_id: %s",
+                    group.name,
                     group_entity_id,
                     user_group_id,
                 )
@@ -88,6 +89,7 @@ class PostgreSQLClient:
                 )
                 continue
             # Get the user_entity_id for each user belonging to this group
+            logger.debug("Group '%s' has %s members", group.name, len(group.member_uid))
             for user_uid in group.member_uid:
                 try:
                     user = next(filter(lambda u: u.uid == user_uid, users))
@@ -105,7 +107,7 @@ class PostgreSQLClient:
                     )
                     logger.debug(
                         "... group member '%s' has entity_id '%s'",
-                        user,
+                        user.name,
                         user_entity_id,
                     )
                 except StopIteration:

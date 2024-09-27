@@ -21,8 +21,8 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
+    "ldap3==2.9.1",
     "psycopg==3.2.1",
-    "python-ldap==3.4.4",
     "SQLAlchemy==2.0.32",
     "sqlparse==0.5.1",
 ]
@@ -92,7 +92,7 @@ strict = true                        # enable all optional error checking flags
 
 [[tool.mypy.overrides]]
 module = [
-    "ldap.*",
+    "ldap3.*",
     "pytest.*",
     "sqlalchemy.*",
     "sqlparse.*",
