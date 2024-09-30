@@ -78,10 +78,10 @@ COPY synchronise.py .
 
 ## Install pip from wheel
 RUN python /tmp/wheels/pip-0-py3-none-any.whl/pip install \
-    --break-system-packages \
-    --root-user-action ignore \
-    --no-index \
-    /tmp/wheels/pip-0-py3-none-any.whl && \
+        --break-system-packages \
+        --root-user-action ignore \
+        --no-index \
+        /tmp/wheels/pip-0-py3-none-any.whl && \
     rm /tmp/wheels/pip-0-py3-none-any.whl
 
 ## Install Python packages from wheels
