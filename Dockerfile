@@ -54,6 +54,9 @@ RUN /root/.local/bin/hatch build -t wheel && \
     mv dist/guacamole_user_sync*.whl /app/wheels/ && \
     echo "guacamole-user-sync>=0.0" >> requirements.txt
 
+## List all wheels
+RUN ls -alh /app/wheels/
+
 
 # =================
 # Build final image
