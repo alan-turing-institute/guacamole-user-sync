@@ -58,15 +58,15 @@ class LDAPClient:
             )
         except LDAPSocketOpenError as exc:
             msg = "Server could not be reached."
-            logger.exception(msg, exc_info=exc)
+            logger.error(msg)  # noqa: TRY400
             raise LDAPError(msg) from exc
         except LDAPBindError as exc:
             msg = "Connection credentials were incorrect."
-            logger.exception(msg, exc_info=exc)
+            logger.error(msg)  # noqa: TRY400
             raise LDAPError(msg) from exc
         except LDAPException as exc:
             msg = f"Unexpected LDAP exception of type {type(exc)}."
-            logger.exception(msg, exc_info=exc)
+            logger.error(msg)  # noqa: TRY400
             raise LDAPError(msg) from exc
 
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
@@ -107,11 +107,11 @@ class LDAPClient:
             connection.search(query.base_dn, query.filter, attributes=ALL_ATTRIBUTES)
         except LDAPSessionTerminatedByServerError as exc:
             msg = "Server terminated LDAP request."
-            logger.exception(msg, exc_info=exc)
+            logger.error(msg)  # noqa: TRY400
             raise LDAPError(msg) from exc
         except LDAPException as exc:
             msg = f"Unexpected LDAP exception of type {type(exc)}."
-            logger.exception(msg, exc_info=exc)
+            logger.error(msg)  # noqa: TRY400
             raise LDAPError(msg) from exc
         else:
             results = cast(list[Entry], connection.entries)
