@@ -28,27 +28,28 @@ RUN apt-get update && \
         do pipx install "$EXECUTABLE"; \
     done
 
-## Copy project files needed by hatch
+## Use hatch to generate requirements file
+## Note that we need to specify psycopg[c] in order to ensure that dependencies are included in the wheel
 COPY README.md pyproject.toml ./
-COPY guacamole_user_sync guacamole_user_sync
+COPY guacamole_user_sync/*.py guacamole_user_sync/
+RUN /root/.local/bin/hatch run pip freeze | grep -v "^-e" > requirements.txt && \
+    sed -i "s/psycopg=/psycopg[c]=/g" requirements.txt
 
 ## Build a separate pip wheel which can be used to install itself
 ## N.B. we rename the wheel so that we can refer to it by name later
 RUN python -m pip wheel --no-cache-dir --wheel-dir /app/wheels pip && \
     mv /app/wheels/pip*whl /app/wheels/pip-0-py3-none-any.whl
 
-## Build wheels for dependencies then use auditwheel to include shared libraries
-## Note that we need to specify psycopg[c] in order to ensure that dependencies are included in the wheel
-RUN /root/.local/bin/hatch run pip freeze | grep -v "^-e" > requirements.txt && \
-    sed -i "s/psycopg=/psycopg[c]=/g" requirements.txt && \
-    python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
+## Build wheels for dependencies using auditwheel to include shared libraries
+RUN python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
     for WHEEL in /app/repairable/*.whl; do \
         echo "\nRepairing ${WHEEL}" && \
         /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat "manylinux_2_34_$(uname -m)" "${WHEEL}" || mv "${WHEEL}" /app/wheels/; \
     done && \
     rm -rf /app/repairable
 
-## Build a separate wheel for the project
+## Build a wheel for guacamole_user_sync
+COPY guacamole_user_sync guacamole_user_sync
 RUN /root/.local/bin/hatch build -t wheel && \
     mv dist/guacamole_user_sync*.whl /app/wheels/ && \
     echo "guacamole-user-sync>=0.0" >> requirements.txt
