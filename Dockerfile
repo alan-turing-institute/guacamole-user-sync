@@ -19,7 +19,6 @@ RUN apt-get update && \
         patchelf \
         pipx \
         python3-dev \
-        wget \
         && \
     pipx install hatch
 
