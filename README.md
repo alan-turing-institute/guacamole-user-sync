@@ -1,6 +1,10 @@
 # guacamole-user-sync
 Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microsoft Active Directory
 
+[![Latest image](https://ghcr-badge.egpl.dev/alan-turing-institute/guacamole-user-sync/latest_tag)](https://github.com/alan-turing-institute/guacamole-user-sync/pkgs/container/guacamole-user-sync)
+[![Image size](https://ghcr-badge.egpl.dev/alan-turing-institute/guacamole-user-sync/size)](https://github.com/alan-turing-institute/guacamole-user-sync/pkgs/container/guacamole-user-sync)
+[![Publish status](https://github.com/alan-turing-institute/guacamole-user-sync/actions/workflows/publish_docker.yaml/badge.svg)](https://github.com/alan-turing-institute/guacamole-user-sync/pkgs/)
+
 ## Environment variables
 
 - DEBUG: Enable debug output (default: 'False')
