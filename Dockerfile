@@ -32,19 +32,19 @@ RUN apt-get update && \
 COPY README.md pyproject.toml ./
 COPY guacamole_user_sync guacamole_user_sync
 
+## Build a separate pip wheel which can be used to install itself
+## N.B. we rename the wheel so that we can refer to it by name later
+RUN python -m pip wheel --no-cache-dir --wheel-dir /app/wheels pip && \
+    mv /app/wheels/pip*whl /app/wheels/pip-0-py3-none-any.whl
+
 ## Build wheels for dependencies then use auditwheel to include shared libraries
 ## Note that we need to specify psycopg[c] in order to ensure that dependencies are included in the wheel
 RUN /root/.local/bin/hatch run pip freeze | grep -v "^-e" > requirements.txt && \
     sed -i "s/psycopg=/psycopg[c]=/g" requirements.txt && \
     python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
-    mkdir -p /app/wheels && \
     for WHEEL in /app/repairable/*.whl; do \
         /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat manylinux_2_34_aarch64 "${WHEEL}" 2> /dev/null || mv "${WHEEL}" /app/wheels/; \
     done;
-
-## Build a separate pip wheel which can be used to install itself
-RUN python -m pip wheel --no-cache-dir --wheel-dir /app/wheels pip && \
-    mv /app/wheels/pip*whl /app/wheels/pip-0-py3-none-any.whl
 
 ## Build a separate wheel for the project
 RUN /root/.local/bin/hatch build -t wheel && \
