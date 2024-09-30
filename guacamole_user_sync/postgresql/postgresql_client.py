@@ -89,7 +89,11 @@ class PostgreSQLClient:
                 )
                 continue
             # Get the user_entity_id for each user belonging to this group
-            logger.debug("Group '%s' has %s members", group.name, len(group.member_uid))
+            logger.debug(
+                "Group '%s' has %s member(s).",
+                group.name,
+                len(group.member_uid),
+            )
             for user_uid in group.member_uid:
                 try:
                     user = next(filter(lambda u: u.uid == user_uid, users))

@@ -1,67 +1,88 @@
 from typing import Any
 
-import ldap
+from ldap3.core.exceptions import LDAPBindError
 from sqlalchemy import TextClause
 
-from guacamole_user_sync.models import LDAPSearchResult
 from guacamole_user_sync.postgresql.orm import GuacamoleBase
 
 
-class MockLDAPObject:
-    """Mock LDAPObject."""
+class MockLDAPAttribute:
+    """Mock LDAP value."""
 
-    def __init__(self, uri: str) -> None:
-        self.uri = uri
-        self.bind_dn = ""
-        self.bind_password = ""
-
-    def simple_bind_s(self, bind_dn: str, bind_password: str) -> None:
-        if bind_password == "incorrect-password":  # noqa: S105
-            raise ldap.INVALID_CREDENTIALS
-        self.bind_dn = bind_dn
-        self.bind_password = bind_password
+    def __init__(self, value: str | float | list[str]) -> None:
+        self.value = value
 
 
-class MockAsyncSearchList:
-    """Mock AsyncSearchList."""
+class MockLDAPGroupEntry:
+    """Mock LDAP group entry."""
 
     def __init__(
         self,
-        partial: bool,  # noqa: FBT001
-        results: LDAPSearchResult,
-        *args: Any,  # noqa: ANN401, ARG002
-        **kwargs: Any,  # noqa: ANN401, ARG002
+        dn: str,
+        cn: str,
+        memberOf: list[str],  # noqa: N803
+        memberUid: list[str],  # noqa: N803
     ) -> None:
-        self.allResults = results
-        self.partial = partial
+        self.dn = MockLDAPAttribute(dn)
+        self.cn = MockLDAPAttribute(cn)
+        self.memberOf = MockLDAPAttribute(memberOf)
+        self.memberUid = MockLDAPAttribute(memberUid)
 
-    def startSearch(  # noqa: N802
+
+class MockLDAPUserEntry:
+    """Mock LDAP user entry."""
+
+    def __init__(
         self,
-        *args: Any,  # noqa: ANN401
-        **kwargs: Any,  # noqa: ANN401
+        dn: str,
+        displayName: str,  # noqa: N803
+        memberOf: list[str],  # noqa: N803
+        uid: str,
+        userName: str,  # noqa: N803
     ) -> None:
-        pass
+        self.dn = MockLDAPAttribute(dn)
+        self.displayName = MockLDAPAttribute(displayName)
+        self.memberOf = MockLDAPAttribute(memberOf)
+        self.uid = MockLDAPAttribute(uid)
+        self.userName = MockLDAPAttribute(userName)
 
-    def processResults(  # noqa: N802
+
+class MockLDAPServer:
+    """Mock LDAP server."""
+
+    def __init__(
         self,
-        *args: Any,  # noqa: ANN401, ARG002
-        **kwargs: Any,  # noqa: ANN401, ARG002
-    ) -> bool:
-        return self.partial
+        entries: list[MockLDAPGroupEntry] | list[MockLDAPUserEntry],
+    ) -> None:
+        self.entries = entries
 
 
-class MockAsyncSearchListFullResults(MockAsyncSearchList):
-    """Mock AsyncSearchList with full results."""
+class MockLDAPConnection:
+    """Mock LDAP connection."""
 
-    def __init__(self, results: LDAPSearchResult) -> None:
-        super().__init__(results=results, partial=False)
+    def __init__(
+        self,
+        server: MockLDAPServer | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        *,
+        auto_bind: bool = False,
+    ) -> None:
+        self.auto_bind = auto_bind
+        self.password = password
+        if password == "incorrect-password":  # noqa: S105
+            raise LDAPBindError
+        self.server = server
+        self.user = user
 
-
-class MockAsyncSearchListPartialResults(MockAsyncSearchList):
-    """Mock AsyncSearchList with partial results."""
-
-    def __init__(self, results: LDAPSearchResult) -> None:
-        super().__init__(results=results, partial=True)
+    def search(
+        self,
+        base_dn: str,  # noqa: ARG002
+        ldap_filter: str,  # noqa: ARG002
+        attributes: str,  # noqa: ARG002
+    ) -> None:
+        if self.server:
+            self.entries = self.server.entries
 
 
 class MockPostgreSQLBackend:
