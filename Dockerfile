@@ -15,9 +15,7 @@ RUN apt-get update && \
         dumb-init \
         g++ \
         gcc \
-        libldap2-dev \
         libpq-dev \
-        libsasl2-dev \
         patchelf \
         pipx \
         python3-dev \

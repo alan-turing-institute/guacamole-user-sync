@@ -22,12 +22,6 @@ jobs:
       - name: Install hatch
         run: pip install hatch
 
-      - name: Install requirements
-        run: |
-          sudo apt-get install \
-            libldap2-dev \
-            libsasl2-dev
-
       - name: Test Python
         run: hatch run test:all
 
