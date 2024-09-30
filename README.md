@@ -42,11 +42,9 @@ $ docker run -it \
 - `POSTGRESQL_USERNAME`: Username of PostgreSQL user
 - `REPEAT_INTERVAL`: How often (in seconds) to wait before attempting to synchronise again (default: '300')
 
-## Development
+## Contributing
 
-If you are interested in developing this package, you should install the following prerequisites:
-
-- [`hatch`](https://hatch.pypa.io/latest/install/)
+Pull requests are always welcome.
 
 ### Running with Docker
 
@@ -73,7 +71,11 @@ $ docker run -it \
 
 ### Tests
 
-The tests can be run with
+In order to run the tests, you should install the following prerequisites:
+
+- [`hatch`](https://hatch.pypa.io/latest/install/)
+
+The tests can then be run with
 
 ```console
 $ hatch run test:all
