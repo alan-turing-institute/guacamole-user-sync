@@ -21,15 +21,39 @@ Synchronise a Guacamole PostgreSQL database with an LDAP server, such as Microso
 - POSTGRESQL_USERNAME: Username of PostgreSQL user
 - REPEAT_INTERVAL: How often (in seconds) to wait before attempting to synchronise again (default: '300')
 
-## Tests
+## Development
 
-To run the tests you will need to install
+If you are interested in developing this package, you should install the following prerequisites:
 
-- `bats-core`
-- `yq`
+- [`hatch`](https://hatch.pypa.io/latest/install/)
 
-The tests can be run with:
+### Running with Docker
+
+Build the Docker image with
 
 ```console
-$ bats tests
+$ docker build . -t guacamole-user-sync
+```
+
+Run the Docker image with
+
+```console
+$ docker run -it \
+    -e LDAP_HOST=$(your LDAP server host) \
+    -e LDAP_GROUP_BASE_DN=$(your LDAP group DN) \
+    -e LDAP_GROUP_FILTER=$(your LDAP group filter) \
+    -e LDAP_USER_BASE_DN=$(your LDAP user DN) \
+    -e LDAP_USER_FILTER=$(your LDAP user filter) \
+    -e POSTGRESQL_HOST=$(your PostgreSQL server host) \
+    -e POSTGRESQL_PASSWORD=$(your PostgreSQL connection password) \
+    -e POSTGRESQL_USERNAME=$(your PostgreSQL connection username) \
+    guacamole-user-sync
+```
+
+### Tests
+
+The tests can be run with
+
+```console
+$ hatch run test:all
 ```
