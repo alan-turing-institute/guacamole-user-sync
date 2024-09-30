@@ -1,4 +1,6 @@
+# ===================
 # Build working image
+# ===================
 FROM python:3.11.9-slim AS builder
 
 ## Set up work directory
@@ -46,7 +48,10 @@ RUN /root/.local/bin/hatch build -t wheel && \
     mv dist/guacamole_user_sync*.whl /app/wheels/ && \
     echo "guacamole-user-sync>=0.0" >> requirements.txt
 
+
+# =================
 # Build final image
+# =================
 FROM gcr.io/distroless/python3-debian12:debug
 
 ## This shell is only available in the debug image
