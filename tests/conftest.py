@@ -2,13 +2,15 @@ from datetime import UTC, datetime
 
 import pytest
 
-from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPSearchResult, LDAPUser
+from guacamole_user_sync.models import LDAPGroup, LDAPQuery, LDAPUser
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleEntity,
     GuacamoleEntityType,
     GuacamoleUser,
     GuacamoleUserGroup,
 )
+
+from .mocks import MockLDAPGroupEntry, MockLDAPUserEntry
 
 
 @pytest.fixture
@@ -69,70 +71,45 @@ def ldap_query_users_fixture() -> LDAPQuery:
 
 
 @pytest.fixture
-def ldap_response_groups_fixture() -> LDAPSearchResult:
+def ldap_response_groups_fixture() -> list[MockLDAPGroupEntry]:
     return [
-        (
-            0,
-            (
-                "CN=plaintiffs,OU=groups,DC=rome,DC=la",
-                {
-                    "cn": [b"plaintiffs"],
-                    "memberOf": [],
-                    "memberUid": [b"aulus.agerius"],
-                },
-            ),
+        MockLDAPGroupEntry(
+            dn="CN=plaintiffs,OU=groups,DC=rome,DC=la",
+            cn="plaintiffs",
+            memberOf=[],
+            memberUid=["aulus.agerius"],
         ),
-        (
-            1,
-            (
-                "CN=defendants,OU=groups,DC=rome,DC=la",
-                {
-                    "cn": [b"defendants"],
-                    "memberOf": [],
-                    "memberUid": [b"numerius.negidius"],
-                },
-            ),
+        MockLDAPGroupEntry(
+            dn="CN=defendants,OU=groups,DC=rome,DC=la",
+            cn="defendants",
+            memberOf=[],
+            memberUid=["numerius.negidius"],
         ),
-        (
-            2,
-            (
-                "CN=everyone,OU=groups,DC=rome,DC=la",
-                {
-                    "cn": [b"everyone"],
-                    "memberOf": [],
-                    "memberUid": [b"aulus.agerius", b"numerius.negidius"],
-                },
-            ),
+        MockLDAPGroupEntry(
+            dn="CN=everyone,OU=groups,DC=rome,DC=la",
+            cn="everyone",
+            memberOf=[],
+            memberUid=["aulus.agerius", "numerius.negidius"],
         ),
     ]
 
 
 @pytest.fixture
-def ldap_response_users_fixture() -> LDAPSearchResult:
+def ldap_response_users_fixture() -> list[MockLDAPUserEntry]:
     return [
-        (
-            0,
-            (
-                "CN=aulus.agerius,OU=users,DC=rome,DC=la",
-                {
-                    "displayName": [b"Aulus Agerius"],
-                    "memberOf": [b"CN=plaintiffs,OU=groups,DC=rome,DC=la"],
-                    "uid": [b"aulus.agerius"],
-                    "userName": [b"aulus.agerius@rome.la"],
-                },
-            ),
+        MockLDAPUserEntry(
+            dn="CN=aulus.agerius,OU=users,DC=rome,DC=la",
+            displayName="Aulus Agerius",
+            memberOf=["CN=plaintiffs,OU=groups,DC=rome,DC=la"],
+            uid="aulus.agerius",
+            userName="aulus.agerius@rome.la",
         ),
-        (
-            1,
-            (
-                "CN=numerius.negidius,OU=users,DC=rome,DC=la",
-                {
-                    "displayName": [b"Numerius Negidius"],
-                    "memberOf": [b"CN=defendants,OU=groups,DC=rome,DC=la"],
-                    "uid": [b"numerius.negidius"],
-                    "userName": [b"numerius.negidius@rome.la"],
-                },
-            ),
+        MockLDAPUserEntry(
+            dn="CN=numerius.negidius,OU=users,DC=rome,DC=la",
+            displayName="Numerius Negidius",
+            memberOf=["CN=defendants,OU=groups,DC=rome,DC=la"],
+            uid="numerius.negidius",
+            userName="numerius.negidius@rome.la",
         ),
     ]
 

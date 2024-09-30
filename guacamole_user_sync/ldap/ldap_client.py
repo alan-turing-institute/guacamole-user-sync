@@ -1,14 +1,19 @@
 import logging
+from typing import cast
 
-import ldap
-from ldap.asyncsearch import List as AsyncSearchList
-from ldap.ldapobject import LDAPObject
+from ldap3 import ALL, ALL_ATTRIBUTES, Connection, Server
+from ldap3.abstract.entry import Entry
+from ldap3.core.exceptions import (
+    LDAPBindError,
+    LDAPException,
+    LDAPSessionTerminatedByServerError,
+    LDAPSocketOpenError,
+)
 
 from guacamole_user_sync.models import (
     LDAPError,
     LDAPGroup,
     LDAPQuery,
-    LDAPSearchResult,
     LDAPUser,
 )
 
@@ -22,85 +27,93 @@ class LDAPClient:
         self,
         hostname: str,
         *,
+        auto_bind: bool = True,
         bind_dn: str | None = None,
         bind_password: str | None = None,
     ) -> None:
-        self.cnxn: LDAPObject | None = None
+        self.auto_bind = auto_bind
         self.bind_dn = bind_dn
         self.bind_password = bind_password
-        self.hostname = hostname
+        self.server = Server(hostname, get_info=ALL)
 
-    def connect(self) -> LDAPObject:
-        if not self.cnxn:
-            logger.info("Initialising connection to LDAP host at %s", self.hostname)
-            self.cnxn = ldap.initialize(f"ldap://{self.hostname}")
-            if self.bind_dn:
-                try:
-                    self.cnxn.simple_bind_s(self.bind_dn, self.bind_password)
-                except ldap.INVALID_CREDENTIALS as exc:
-                    logger.warning("Connection credentials were incorrect.")
-                    raise LDAPError from exc
-        return self.cnxn
+    @staticmethod
+    def as_list(ldap_entry: str | list[str] | None) -> list[str]:
+        if isinstance(ldap_entry, list):
+            return ldap_entry
+        if ldap_entry is None:
+            return []
+        if isinstance(ldap_entry, str):
+            return [ldap_entry]
+        msg = f"Unexpected input {ldap_entry} of type {type(ldap_entry)}"
+        raise ValueError(msg)
+
+    def connect(self) -> Connection:
+        logger.info("Initialising connection to LDAP host at %s", self.server.host)
+        try:
+            return Connection(
+                self.server,
+                user=self.bind_dn,
+                password=self.bind_password,
+                auto_bind=self.auto_bind,
+            )
+        except LDAPSocketOpenError as exc:
+            msg = "Server could not be reached."
+            logger.exception(msg, exc_info=exc)
+            raise LDAPError(msg) from exc
+        except LDAPBindError as exc:
+            msg = "Connection credentials were incorrect."
+            logger.exception(msg, exc_info=exc)
+            raise LDAPError(msg) from exc
+        except LDAPException as exc:
+            msg = f"Unexpected LDAP exception of type {type(exc)}."
+            logger.exception(msg, exc_info=exc)
+            raise LDAPError(msg) from exc
 
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
         output = []
-        for result in self.search(query):
-            attr_dict = result[1][1]
+        for entry in self.search(query):
             output.append(
                 LDAPGroup(
-                    member_of=[
-                        group.decode("utf-8") for group in attr_dict["memberOf"]
-                    ],
-                    member_uid=[
-                        group.decode("utf-8") for group in attr_dict["memberUid"]
-                    ],
-                    name=attr_dict[query.id_attr][0].decode("utf-8"),
+                    member_of=self.as_list(entry.memberOf.value),
+                    member_uid=self.as_list(entry.memberUid.value),
+                    name=getattr(entry, query.id_attr).value,
                 ),
             )
+            logger.debug("Found LDAP group %s", output[-1])
         logger.debug("Loaded %s LDAP groups", len(output))
         return output
 
     def search_users(self, query: LDAPQuery) -> list[LDAPUser]:
         output = []
-        for result in self.search(query):
-            attr_dict = result[1][1]
+        for entry in self.search(query):
             output.append(
                 LDAPUser(
-                    display_name=attr_dict["displayName"][0].decode("utf-8"),
-                    member_of=[
-                        group.decode("utf-8") for group in attr_dict["memberOf"]
-                    ],
-                    name=attr_dict[query.id_attr][0].decode("utf-8"),
-                    uid=attr_dict["uid"][0].decode("utf-8"),
+                    display_name=entry.displayName.value,
+                    member_of=self.as_list(entry.memberOf.value),
+                    name=getattr(entry, query.id_attr).value,
+                    uid=entry.uid.value,
                 ),
             )
+            logger.debug("Found LDAP user %s", output[-1])
         logger.debug("Loaded %s LDAP users", len(output))
         return output
 
-    def search(self, query: LDAPQuery) -> LDAPSearchResult:
-        results: LDAPSearchResult = []
+    def search(self, query: LDAPQuery) -> list[Entry]:
         logger.info("Querying LDAP host with:")
         logger.info("... base DN: %s", query.base_dn)
         logger.info("... filter: %s", query.filter)
-        searcher = AsyncSearchList(self.connect())
         try:
-            searcher.startSearch(
-                query.base_dn,
-                ldap.SCOPE_SUBTREE,
-                query.filter,
-            )
-            if searcher.processResults() != 0:
-                logger.warning("Only partial results received.")
-        except ldap.NO_SUCH_OBJECT as exc:
-            logger.warning("Server returned no results.")
-            raise LDAPError from exc
-        except ldap.SERVER_DOWN as exc:
-            logger.warning("Server could not be reached.")
-            raise LDAPError from exc
-        except ldap.SIZELIMIT_EXCEEDED as exc:
-            logger.warning("Server-side size limit exceeded.")
-            raise LDAPError from exc
+            connection = self.connect()
+            connection.search(query.base_dn, query.filter, attributes=ALL_ATTRIBUTES)
+        except LDAPSessionTerminatedByServerError as exc:
+            msg = "Server terminated LDAP request."
+            logger.exception(msg, exc_info=exc)
+            raise LDAPError(msg) from exc
+        except LDAPException as exc:
+            msg = f"Unexpected LDAP exception of type {type(exc)}."
+            logger.exception(msg, exc_info=exc)
+            raise LDAPError(msg) from exc
         else:
-            results = searcher.allResults
+            results = cast(list[Entry], connection.entries)
             logger.debug("Server returned %s results.", len(results))
             return results

@@ -340,9 +340,11 @@ class TestPostgreSQLClient:
             )
 
             for output_line in (
+                "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
+                "Working on group 'defendants'",
                 "Could not determine user_group_id for group 'defendants'.",
-                "-> entity_id: 2; user_group_id: 12",
-                "-> entity_id: 3; user_group_id: 13",
+                "Group 'everyone' has entity_id: 2 and user_group_id: 12",
+                "Group 'plaintiffs' has entity_id: 3 and user_group_id: 13",
             ):
                 assert output_line in caplog.text
 
@@ -498,15 +500,18 @@ class TestPostgreSQLClient:
                 "There are 2 valid user entit(y|ies)",
                 "Ensuring that 2 user(s) are correctly assigned among 3 group(s)",
                 "Working on group 'defendants'",
-                "-> entity_id: None; user_group_id: None",
-                "... group member 'LDAPUser(display_name='Numerius Negidius'",
+                "Group 'defendants' has entity_id: None and user_group_id: None",
+                "Group 'defendants' has 1 member(s).",
+                " ... group member 'numerius.negidius@rome.la' has entity_id 'None'",
                 "Working on group 'everyone'",
-                "-> entity_id: None; user_group_id: None",
-                "... group member 'LDAPUser(display_name='Aulus Agerius'",
-                "... group member 'LDAPUser(display_name='Numerius Negidius'",
+                "Group 'everyone' has entity_id: None and user_group_id: None",
+                "Group 'everyone' has 2 member(s).",
+                " ... group member 'aulus.agerius@rome.la' has entity_id 'None'",
+                " ... group member 'numerius.negidius@rome.la' has entity_id 'None'",
                 "Working on group 'plaintiffs'",
-                "-> entity_id: None; user_group_id: None",
-                "... group member 'LDAPUser(display_name='Aulus Agerius'",
+                "Group 'plaintiffs' has entity_id: None and user_group_id: None",
+                "Group 'plaintiffs' has 1 member(s).",
+                " ... group member 'aulus.agerius@rome.la' has entity_id 'None'",
                 "... creating 4 user/group assignments.",
             ):
                 assert output_line in caplog.text

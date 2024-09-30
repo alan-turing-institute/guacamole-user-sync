@@ -23,7 +23,9 @@ class GuacamoleEntity(GuacamoleBase):
 
     entity_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128))
-    type: Mapped[GuacamoleEntityType] = mapped_column(Enum(GuacamoleEntityType))
+    type: Mapped[GuacamoleEntityType] = mapped_column(
+        Enum(GuacamoleEntityType, name="guacamole_entity_type"),
+    )
 
 
 class GuacamoleUser(GuacamoleBase):
