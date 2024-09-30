@@ -1,4 +1,6 @@
+# ===================
 # Build working image
+# ===================
 FROM python:3.11.9-slim AS builder
 
 ## Set up work directory
@@ -15,41 +17,50 @@ RUN apt-get update && \
         dumb-init \
         g++ \
         gcc \
-        libldap2-dev \
         libpq-dev \
-        libsasl2-dev \
         patchelf \
         pipx \
         python3-dev \
-        wget \
         && \
-    pipx install hatch
+    for EXECUTABLE in \
+        "auditwheel" \
+        "hatch"; \
+        do pipx install "$EXECUTABLE"; \
+    done
 
-## Copy project files needed by hatch
-COPY README.md pyproject.toml ./
-COPY guacamole_user_sync guacamole_user_sync
-
-## Build wheels for dependencies then use auditwheel to include shared libraries
+## Use hatch to generate requirements file
 ## Note that we need to specify psycopg[c] in order to ensure that dependencies are included in the wheel
+COPY README.md pyproject.toml ./
+COPY guacamole_user_sync/*.py guacamole_user_sync/
 RUN /root/.local/bin/hatch run pip freeze | grep -v "^-e" > requirements.txt && \
-    sed -i "s/psycopg=/psycopg[c]=/g" requirements.txt && \
-    python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
-    python -m pip install auditwheel && \
-    mkdir -p /app/wheels && \
-    for WHEEL in /app/repairable/*.whl; do \
-        auditwheel repair --wheel-dir /app/wheels --plat manylinux_2_34_aarch64 "${WHEEL}" 2> /dev/null || mv "${WHEEL}" /app/wheels/; \
-    done;
+    sed -i "s/psycopg=/psycopg[c]=/g" requirements.txt
 
 ## Build a separate pip wheel which can be used to install itself
+## N.B. we rename the wheel so that we can refer to it by name later
 RUN python -m pip wheel --no-cache-dir --wheel-dir /app/wheels pip && \
     mv /app/wheels/pip*whl /app/wheels/pip-0-py3-none-any.whl
 
-## Build a separate wheel for the project
+## Build wheels for dependencies using auditwheel to include shared libraries
+RUN python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
+    for WHEEL in /app/repairable/*.whl; do \
+        echo "\nRepairing ${WHEEL}" && \
+        /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat "manylinux_2_34_$(uname -m)" "${WHEEL}" || mv "${WHEEL}" /app/wheels/; \
+    done && \
+    rm -rf /app/repairable
+
+## Build a wheel for guacamole_user_sync
+COPY guacamole_user_sync guacamole_user_sync
 RUN /root/.local/bin/hatch build -t wheel && \
     mv dist/guacamole_user_sync*.whl /app/wheels/ && \
     echo "guacamole-user-sync>=0.0" >> requirements.txt
 
+## List all wheels
+RUN ls -alh /app/wheels/
+
+
+# =================
 # Build final image
+# =================
 FROM gcr.io/distroless/python3-debian12:debug
 
 ## This shell is only available in the debug image
@@ -70,10 +81,10 @@ COPY synchronise.py .
 
 ## Install pip from wheel
 RUN python /tmp/wheels/pip-0-py3-none-any.whl/pip install \
-    --break-system-packages \
-    --root-user-action ignore \
-    --no-index \
-    /tmp/wheels/pip-0-py3-none-any.whl && \
+        --break-system-packages \
+        --root-user-action ignore \
+        --no-index \
+        /tmp/wheels/pip-0-py3-none-any.whl && \
     rm /tmp/wheels/pip-0-py3-none-any.whl
 
 ## Install Python packages from wheels
