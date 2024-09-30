@@ -7,8 +7,8 @@
 | guacamole\_user\_sync/\_\_about\_\_.py                  |        1 |        0 |     100% |           |
 | guacamole\_user\_sync/\_\_init\_\_.py                   |        2 |        0 |     100% |           |
 | guacamole\_user\_sync/ldap/\_\_init\_\_.py              |        2 |        0 |     100% |           |
-| guacamole\_user\_sync/ldap/ldap\_client.py              |       59 |        0 |     100% |           |
-| guacamole\_user\_sync/models/\_\_init\_\_.py            |        6 |        0 |     100% |           |
+| guacamole\_user\_sync/ldap/ldap\_client.py              |       71 |        0 |     100% |           |
+| guacamole\_user\_sync/models/\_\_init\_\_.py            |        5 |        0 |     100% |           |
 | guacamole\_user\_sync/models/exceptions.py              |        2 |        0 |     100% |           |
 | guacamole\_user\_sync/models/guacamole.py               |        6 |        0 |     100% |           |
 | guacamole\_user\_sync/models/ldap\_objects.py           |       12 |        0 |     100% |           |
@@ -16,9 +16,9 @@
 | guacamole\_user\_sync/postgresql/\_\_init\_\_.py        |        4 |        0 |     100% |           |
 | guacamole\_user\_sync/postgresql/orm.py                 |       29 |        0 |     100% |           |
 | guacamole\_user\_sync/postgresql/postgresql\_backend.py |       52 |        0 |     100% |           |
-| guacamole\_user\_sync/postgresql/postgresql\_client.py  |       95 |        0 |     100% |           |
+| guacamole\_user\_sync/postgresql/postgresql\_client.py  |       96 |        0 |     100% |           |
 | guacamole\_user\_sync/postgresql/sql.py                 |       23 |        0 |     100% |           |
-|                                               **TOTAL** |  **299** |    **0** | **100%** |           |
+|                                               **TOTAL** |  **311** |    **0** | **100%** |           |
 
 
 ## Setup coverage badge
