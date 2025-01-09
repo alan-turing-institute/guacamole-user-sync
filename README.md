@@ -25,6 +25,10 @@ $ docker run -it \
 LDAP filter syntax is described here: https://ldap.com/ldap-filters/.
 If you want a simple filter for testing, try `(objectClass=*)` which will match any LDAP object.
 
+Similarly, LDAP distinguished names (DNs) are described here: https://ldap.com/ldap-dns-and-rdns/.
+The user or group base DN will typically be the organisational unit (OU) that all objects of that type belong to.
+For example, a simple user base DN might look something like `OU=users,DC=example,DC=com`.
+
 ## Environment variables
 
 - `DEBUG`: Enable debug output (default: 'False')
