@@ -4,7 +4,7 @@ from .sql import SchemaVersion
 
 __all__ = [
     "PostgreSQLBackend",
-    "PostgreSQLConnectionDetails",
     "PostgreSQLClient",
+    "PostgreSQLConnectionDetails",
     "SchemaVersion",
 ]
