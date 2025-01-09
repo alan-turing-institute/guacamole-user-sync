@@ -1,3 +1,5 @@
+"""Models used for LDAP and PostgreSQL interactions."""
+
 from .exceptions import LDAPError, PostgreSQLError
 from .guacamole import GuacamoleUserDetails
 from .ldap_objects import LDAPGroup, LDAPUser
