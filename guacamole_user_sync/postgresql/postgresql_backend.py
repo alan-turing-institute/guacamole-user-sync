@@ -86,7 +86,7 @@ class PostgreSQLBackend:
     ) -> list[T]:
         with self.session() as session, session.begin():
             if filter_kwargs:
-                result = session.query(table).filter_by(**filter_kwargs)
+                result = session.query(table).filter_by(**filter_kwargs).all()
             else:
-                result = session.query(table)
+                result = session.query(table).all()
         return list(result)
