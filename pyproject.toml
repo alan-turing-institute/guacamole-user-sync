@@ -148,16 +148,16 @@ select = [
     "YTT",  # flake8-2020
 ]
 ignore = [
-  "ANN101",   # missing-type-self [deprecated]
-  "ANN102",   # missing-type-cls [deprecated]
-  "D100",     # undocumented-public-module
-  "D102",     # undocumented-public-method
-  "D103",     # undocumented-public-function
-  "D104",     # undocumented-public-package
-  "D105",     # undocumented-magic-method
-  "D107",     # undocumented-public-init
-  "D203",     # one-blank-line-before-class [conflicts with D211]
-  "D213",     # multi-line-summary-second-line [conflicts with D212]
-  "D400",     # ends-in-period [conflicts with D415]
-  "S101",     # assert [conflicts with pytest]
+    "ANN101",   # missing-type-self [deprecated]
+    "ANN102",   # missing-type-cls [deprecated]
+    "D100",     # undocumented-public-module
+    "D102",     # undocumented-public-method
+    "D103",     # undocumented-public-function
+    "D104",     # undocumented-public-package
+    "D105",     # undocumented-magic-method
+    "D107",     # undocumented-public-init
+    "D203",     # one-blank-line-before-class [conflicts with D211]
+    "D213",     # multi-line-summary-second-line [conflicts with D212]
+    "D400",     # ends-in-period [conflicts with D415]
+    "S101",     # assert [conflicts with pytest]
 ]
