@@ -22,6 +22,9 @@ $ docker run -it \
     ghcr.io/alan-turing-institute/guacamole-user-sync:$(version you want to use)
 ```
 
+LDAP filter syntax is described here: https://ldap.com/ldap-filters/.
+If you want a simple filter for testing, try `(objectClass=*)` which will match any LDAP object.
+
 ## Environment variables
 
 - `DEBUG`: Enable debug output (default: 'False')
