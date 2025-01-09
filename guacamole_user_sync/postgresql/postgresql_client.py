@@ -56,7 +56,7 @@ class PostgreSQLClient:
             len(users),
             len(groups),
         )
-        user_group_members = []
+        user_group_members: list[tuple[int, int]] = []
         for group in groups:
             logger.debug("Working on group '%s'", group.name)
             # Get the user_group_id for each group (via looking up the entity_id)
@@ -120,20 +120,24 @@ class PostgreSQLClient:
                         user_uid,
                     )
                     continue
-                # Create an entry in the user group member table
-                user_group_members.append(
-                    GuacamoleUserGroupMember(
-                        user_group_id=user_group_id,
-                        member_entity_id=user_entity_id,
-                    ),
-                )
+                # Record user/group associations
+                user_group_members.append((user_group_id, user_entity_id))
         # Clear existing assignments then reassign
         logger.debug(
             "... creating %s user/group assignments.",
             len(user_group_members),
         )
         self.backend.delete(GuacamoleUserGroupMember)
-        self.backend.add_all(user_group_members)
+        # Create entries in the user group member table
+        self.backend.add_all(
+            [
+                GuacamoleUserGroupMember(
+                    user_group_id=user_group_id,
+                    member_entity_id=user_entity_id,
+                )
+                for user_group_id, user_entity_id in user_group_members
+            ],
+        )
 
     def ensure_schema(self, schema_version: SchemaVersion) -> None:
         try:
@@ -216,9 +220,7 @@ class PostgreSQLClient:
         )
         self.backend.add_all(
             [
-                GuacamoleUserGroup(
-                    entity_id=group_entity_id,
-                )
+                GuacamoleUserGroup(entity_id=group_entity_id)
                 for group_entity_id in new_group_entity_ids
             ],
         )
