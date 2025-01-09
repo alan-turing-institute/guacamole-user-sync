@@ -50,10 +50,10 @@ class PostgreSQLBackend:
             self._engine = create_engine(url_object, echo=False)
         return self._engine
 
-    def session(self) -> Session:
+    def session(self, *, expire_on_commit: bool = True) -> Session:
         if self._session:
             return self._session
-        return Session(self.engine)
+        return Session(self.engine, expire_on_commit=expire_on_commit)
 
     def add_all(self, items: list[T]) -> None:
         with self.session() as session, session.begin():
@@ -84,9 +84,10 @@ class PostgreSQLBackend:
         table: type[T],
         **filter_kwargs: Any,  # noqa: ANN401
     ) -> list[T]:
-        with self.session() as session, session.begin():
+        # We need expire_on_commit to ensure that the results are not marked as stale
+        with self.session(expire_on_commit=False) as session, session.begin():
             if filter_kwargs:
-                result = session.query(table).filter_by(**filter_kwargs)
+                result = session.query(table).filter_by(**filter_kwargs).all()
             else:
-                result = session.query(table)
+                result = session.query(table).all()
         return list(result)
