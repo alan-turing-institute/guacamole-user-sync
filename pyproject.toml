@@ -100,62 +100,13 @@ module = [
 ignore_missing_imports = true
 
 [tool.ruff.lint]
-select = [
-    "A",    # flake8-builtins
-    "ANN",  # flake8-annotations
-    "ARG",  # flake8-unused-arguments
-    "B",    # flake8-bugbear
-    "C4",   # flake8-comprehensions
-    "C90",  # McCabe complexity
-    "COM",  # flake8-commas
-    "D",    # pydocstyle
-    "DTZ",  # flake8-datetimez
-    "E",    # pycodestyle errors
-    "EM",   # flake8-errmsg
-    "F",    # pyflakes
-    "FA",   # flake8-future-annotations
-    "FBT",  # flake8-boolean-trap
-    "FLY",  # flynt
-    "FURB", # refurb
-    "G",    # flake8-logging-format
-    "I",    # isort
-    "ICN",  # flake8-import-conventions
-    "INP",  # flake8-no-pep420
-    "INT",  # flake8-gettext
-    "ISC",  # flake8-implicit-str-concat
-    "LOG",  # flake8-logging
-    "N",    # pep8-naming
-    "PERF", # perflint
-    "PGH",  # pygrep-hooks
-    "PIE",  # flake8-pie
-    "PL",   # pylint
-    "PT",   # flake8-pytest-style
-    "PTH",  # flake8-use-pathlib
-    "PYI",  # flake8-pyi
-    "Q",    # flake8-quotes
-    "RET",  # flake8-return
-    "RSE",  # flake8-rse
-    "RUF",  # Ruff-specific rules
-    "S",    # flake8-bandit
-    "SIM",  # flake8-simplify
-    "SLF",  # flake8-self
-    "T20",  # flake8-print
-    "TCH",  # flake8-type-checking
-    "TID",  # flake8-tidy-imports
-    "TRY",  # tryceratops
-    "UP",   # pyupgrade
-    "W",    # pycodestyle warnings
-    "YTT",  # flake8-2020
-]
+select = ["ALL"]
 ignore = [
     "D100",     # undocumented-public-module
     "D102",     # undocumented-public-method
     "D103",     # undocumented-public-function
-    "D104",     # undocumented-public-package
-    "D105",     # undocumented-magic-method
     "D107",     # undocumented-public-init
     "D203",     # one-blank-line-before-class [conflicts with D211]
     "D213",     # multi-line-summary-second-line [conflicts with D212]
-    "D400",     # ends-in-period [conflicts with D415]
     "S101",     # assert [conflicts with pytest]
 ]
