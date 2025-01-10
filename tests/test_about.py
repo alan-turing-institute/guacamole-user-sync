@@ -5,4 +5,4 @@ class TestAbout:
     """Test about.py."""
 
     def test_version(self) -> None:
-        assert version == "0.6.0"
+        assert version == "0.7.0"
