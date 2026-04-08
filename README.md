@@ -37,6 +37,7 @@ For example, a simple user base DN might look something like `OU=users,DC=exampl
 - `LDAP_GROUP_BASE_DN`: Base DN for groups
 - `LDAP_GROUP_FILTER`: LDAP filter to select groups
 - `LDAP_GROUP_NAME_ATTR`: Attribute used to extract group names (default: 'cn')
+- `LDAP_GROUP_MEMBER_ATTR`: Attribute used to extract group members (default: 'member')
 - `LDAP_HOST`: LDAP host
 - `LDAP_PORT`: LDAP port (default: '389')
 - `LDAP_USER_BASE_DN`: Base DN for users
@@ -48,6 +49,7 @@ For example, a simple user base DN might look something like `OU=users,DC=exampl
 - `POSTGRESQL_PORT`: PostgreSQL server port (default: '5432')
 - `POSTGRESQL_USERNAME`: Username of PostgreSQL user
 - `REPEAT_INTERVAL`: How often (in seconds) to wait before attempting to synchronise again (default: '300')
+- `SINGLE_RUN_MODE`: Enables single-run mode. If 'true', the synchronizer performs one sync and exits (e.g., for cronjobs). Otherwise, it runs continuously at `REPEAT_INTERVAL`. (default: 'false')
 
 ## Contributing
 

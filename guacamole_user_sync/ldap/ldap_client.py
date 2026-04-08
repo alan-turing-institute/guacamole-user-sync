@@ -30,11 +30,13 @@ class LDAPClient:
         auto_bind: bool = True,
         bind_dn: str | None = None,
         bind_password: str | None = None,
+        group_member_attribute: str = "member",
     ) -> None:
         self.auto_bind = auto_bind
         self.bind_dn = bind_dn
         self.bind_password = bind_password
         self.server = Server(hostname, get_info=ALL)
+        self.group_member_attribute = group_member_attribute
 
     @staticmethod
     def as_list(ldap_entry: str | list[str] | None) -> list[str]:
@@ -72,10 +74,22 @@ class LDAPClient:
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
         output = []
         for entry in self.search(query):
+
+            member_of_attr = getattr(entry, 'memberOf', None)
+            member_of_values = self.as_list(member_of_attr.value if member_of_attr else None)
+
+            member_attr = getattr(entry, self.group_member_attribute, None)
+            member_values = self.as_list(member_attr.value if member_attr else None)
+            
+            if hasattr(entry, self.group_member_attribute):
+                member_values = self.as_list(getattr(entry, self.group_member_attribute).value)
+            else:
+                member_values = []
+
             output.append(
                 LDAPGroup(
-                    member_of=self.as_list(entry.memberOf.value),
-                    member_uid=self.as_list(entry.memberUid.value),
+                    member_of=member_of_values,
+                    member_uid=member_values,
                     name=getattr(entry, query.id_attr).value,
                 ),
             )
@@ -86,12 +100,23 @@ class LDAPClient:
     def search_users(self, query: LDAPQuery) -> list[LDAPUser]:
         output = []
         for entry in self.search(query):
+
+            member_of_attr = getattr(entry, 'memberOf', None)
+            member_of_values = self.as_list(member_of_attr.value) if member_of_attr else []
+
+            display_name_attr = getattr(entry, 'displayName', None)
+            display_name_value = display_name_attr.value if display_name_attr else ""
+
+            uid_attr = getattr(entry, 'uid', None)
+            uid_value = uid_attr.value if uid_attr else ""
+
+
             output.append(
                 LDAPUser(
-                    display_name=entry.displayName.value,
-                    member_of=self.as_list(entry.memberOf.value),
+                    display_name=display_name_value,
+                    member_of=member_of_values,
                     name=getattr(entry, query.id_attr).value,
-                    uid=entry.uid.value,
+                    uid=uid_value,
                 ),
             )
             logger.debug("Found LDAP user %s", output[-1])
