@@ -1,5 +1,6 @@
 import logging
 import secrets
+import re
 from datetime import UTC, datetime
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -35,6 +36,7 @@ class PostgreSQLClient:
         port: int,
         user_name: str,
         user_password: str,
+        ldap_group_member_attr: str,
     ) -> None:
         self.backend = PostgreSQLBackend(
             connection_details=PostgreSQLConnectionDetails(
@@ -45,7 +47,13 @@ class PostgreSQLClient:
                 user_password=user_password,
             ),
         )
+        self.ldap_group_member_attr = ldap_group_member_attr
 
+    @staticmethod
+    def extract_uid_from_dn(dn: str) -> str | None:
+        match = re.search(r"uid=([^,]+)", dn)
+        return match.group(1) if match else None
+    
     def assign_users_to_groups(
         self,
         groups: list[LDAPGroup],
@@ -94,11 +102,23 @@ class PostgreSQLClient:
                 group.name,
                 len(group.member_uid),
             )
-            for user_uid in group.member_uid:
+            for member_value in group.member_uid:
+                uid_to_match = member_value
+
+                if self.ldap_group_member_attr == "member" or "=" in member_value:
+                    extracted_uid = self.extract_uid_from_dn(member_value)
+                    if extracted_uid:
+                        uid_to_match = extracted_uid
+                    else:
+                        logger.debug(
+                            "Could not extract UID from member value (possibly not a DN or malformed): %s. Using raw value as UID.",
+                            member_value
+                        )
+
                 try:
-                    user = next(filter(lambda u: u.uid == user_uid, users))
+                    user = next(filter(lambda u: u.uid == uid_to_match, users))
                 except StopIteration:
-                    logger.debug("Could not find LDAP user with UID %s", user_uid)
+                    logger.debug("Could not find LDAP user with UID %s (from member value: %s)", uid_to_match, member_value)
                     continue
                 try:
                     user_entity_id = next(
@@ -117,7 +137,7 @@ class PostgreSQLClient:
                 except StopIteration:
                     logger.debug(
                         "Could not find entity ID for LDAP user '%s'",
-                        user_uid,
+                        user.name,
                     )
                     continue
                 # Record user/group associations
