@@ -42,6 +42,7 @@ class TestLDAPClient:
         client = LDAPClient("test-host", auto_bind=False)
         cnxn = client.connect()
         assert isinstance(cnxn, Connection)
+        assert cnxn.raise_exceptions is True
 
     def test_connect_with_bind(self) -> None:
         client = LDAPClient(
