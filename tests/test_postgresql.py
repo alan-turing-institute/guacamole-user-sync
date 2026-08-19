@@ -237,7 +237,7 @@ class TestPostgreSQLBackendWithRealSchema:
             host_name="host_name",
             port=1234,
             user_name="user_name",
-            user_password="user_password",
+            user_password="user_password",  # noqa: S106
         )
         client.backend = backend
 
@@ -275,7 +275,7 @@ class TestPostgreSQLBackendWithRealSchema:
             host_name="host_name",
             port=1234,
             user_name="user_name",
-            user_password="user_password",
+            user_password="user_password",  # noqa: S106
         )
         client.backend = backend
         client.ensure_connection_permissions(
