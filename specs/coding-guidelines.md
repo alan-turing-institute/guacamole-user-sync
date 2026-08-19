@@ -37,3 +37,16 @@ already enforce.
 - Keep in-line comments brief. If a comment needs more than a sentence or two
   to explain *why*, link out to an external source (e.g. documentation,
   issue, upstream reference) instead of writing the explanation inline.
+
+## Testing
+
+- Aim to cover the maximum number of code paths with the minimum number of
+  tests. Before adding a new test, check whether an existing test (or one
+  planned alongside it) already exercises the same path as a side effect —
+  if so, don't add a separate, narrower test just to re-assert it in
+  isolation.
+- Avoid overlapping tests: two tests that fail for the same underlying
+  reason are redundant, not extra safety. Prefer extending an existing
+  test's assertions (when it already puts the system in the right state) over
+  writing a new test that re-creates similar state to check something
+  adjacent.
