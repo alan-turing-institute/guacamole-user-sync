@@ -19,6 +19,14 @@ already enforce.
   over broad ones (`Any`, `object`) unless no more specific type is
   available (e.g. third-party callback signatures typed `Any` upstream).
 
+## Method/function length
+
+- Prefer brief, focused methods/functions over long ones — this keeps code
+  readable and each piece easy to reason about in isolation.
+- If a method/function grows too long or starts doing several distinct
+  things, split it into smaller, well-named helpers rather than letting it
+  keep growing.
+
 ## Docstrings
 
 - Keep docstrings brief: at most two sentences stating the purpose of the

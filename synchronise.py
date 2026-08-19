@@ -7,6 +7,8 @@ from guacamole_user_sync.ldap import LDAPClient
 from guacamole_user_sync.models import LDAPError, LDAPQuery, PostgreSQLError
 from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
 
+logger = logging.getLogger("guacamole_user_sync")
+
 
 def main(  # noqa: PLR0913
     ldap_bind_dn: str | None,
@@ -125,7 +127,6 @@ if __name__ == "__main__":
         format=r"%(asctime)s [%(levelname)-8s] %(message)s",
         datefmt=r"%Y-%m-%d %H:%M:%S",
     )
-    logger = logging.getLogger("guacamole_user_sync")
 
     main(
         ldap_bind_dn=os.getenv("LDAP_BIND_DN", None),
