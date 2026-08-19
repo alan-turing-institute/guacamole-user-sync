@@ -27,6 +27,15 @@ already enforce.
   things, split it into smaller, well-named helpers rather than letting it
   keep growing.
 
+## Class/module size
+
+- The same principle applies one level up: keep classes and modules brief
+  and focused on a single responsibility, not just the methods/functions
+  inside them.
+- If a class or module grows too large or starts covering several distinct
+  responsibilities, split it into smaller, well-named classes/modules
+  rather than letting it keep growing.
+
 ## Docstrings
 
 - Keep docstrings brief: at most two sentences stating the purpose of the
