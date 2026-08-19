@@ -220,6 +220,93 @@ class TestPostgreSQLBackendWithRealSchema:
         assert results[0].entity_id == 1
         assert results[0].type == GuacamoleEntityType.USER
 
+    def test_ensure_connection_permissions_add_is_idempotent(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """Granting a permission that's already there must not fail or duplicate it."""
+        backend = postgresql_sqlite_backend_fixture
+        admin_group_entity = postgresql_model_guacamoleentity_admin_group_fixture[0]
+        backend.add_all([admin_group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",
+        )
+        client.backend = backend
+
+        for _ in range(2):
+            client.ensure_connection_permissions(
+                admin_group_name=admin_group_entity.name,
+                user_group_name="unused",
+            )
+
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=admin_group_entity.entity_id,
+        )
+        assert {permission.permission for permission in permissions} == set(
+            ADMIN_CONNECTION_PERMISSIONS,
+        )
+
+    def test_ensure_connection_permissions_removes_manually_added_extras(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """A manually-added extra permission is removed on the next reconciliation."""
+        backend = postgresql_sqlite_backend_fixture
+        user_group_entity = postgresql_model_guacamoleentity_user_group_fixture[
+            2
+        ]  # plaintiffs
+        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
+        backend.add_all([user_group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",
+        )
+        client.backend = backend
+        client.ensure_connection_permissions(
+            admin_group_name="unused",
+            user_group_name=user_group_entity.name,
+        )
+
+        # Someone manually grants an extra permission outside this tool
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=user_group_entity.entity_id,
+                    connection_id=connection_id,
+                    permission=GuacamoleObjectPermissionType.UPDATE,
+                ),
+            ],
+        )
+
+        client.ensure_connection_permissions(
+            admin_group_name="unused",
+            user_group_name=user_group_entity.name,
+        )
+
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=user_group_entity.entity_id,
+        )
+        assert len(permissions) == 1
+        assert permissions[0].connection_id == connection_id
+        assert permissions[0].permission == GuacamoleObjectPermissionType.READ
+
 
 class TestPostgreSQLClient:
     """Test PostgreSQLClient."""
@@ -687,78 +774,3 @@ class TestPostgreSQLClient:
                 "... 1 user(s) will be removed",
             ):
                 assert output_line in caplog.text
-
-    def test_ensure_connection_permissions_add_is_idempotent(
-        self,
-        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
-        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
-        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
-    ) -> None:
-        """Granting a permission that's already there must not fail or duplicate it."""
-        backend = postgresql_sqlite_backend_fixture
-        admin_group_entity = postgresql_model_guacamoleentity_admin_group_fixture[0]
-        backend.add_all([admin_group_entity])
-        backend.add_all(postgresql_model_guacamoleconnection_fixture)
-
-        client = PostgreSQLClient(**self.client_kwargs)
-        client.backend = backend
-
-        for _ in range(2):
-            client.ensure_connection_permissions(
-                admin_group_name=admin_group_entity.name,
-                user_group_name="unused",
-            )
-
-        permissions = backend.query(
-            GuacamoleConnectionPermission,
-            entity_id=admin_group_entity.entity_id,
-        )
-        assert {permission.permission for permission in permissions} == set(
-            ADMIN_CONNECTION_PERMISSIONS,
-        )
-
-    def test_ensure_connection_permissions_removes_manually_added_extras(
-        self,
-        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
-        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
-        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
-    ) -> None:
-        """A manually-added extra permission is removed on the next reconciliation."""
-        backend = postgresql_sqlite_backend_fixture
-        user_group_entity = postgresql_model_guacamoleentity_user_group_fixture[
-            2
-        ]  # plaintiffs
-        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
-        backend.add_all([user_group_entity])
-        backend.add_all(postgresql_model_guacamoleconnection_fixture)
-
-        client = PostgreSQLClient(**self.client_kwargs)
-        client.backend = backend
-        client.ensure_connection_permissions(
-            admin_group_name="unused",
-            user_group_name=user_group_entity.name,
-        )
-
-        # Someone manually grants an extra permission outside this tool
-        backend.add_all(
-            [
-                GuacamoleConnectionPermission(
-                    entity_id=user_group_entity.entity_id,
-                    connection_id=connection_id,
-                    permission=GuacamoleObjectPermissionType.UPDATE,
-                ),
-            ],
-        )
-
-        client.ensure_connection_permissions(
-            admin_group_name="unused",
-            user_group_name=user_group_entity.name,
-        )
-
-        permissions = backend.query(
-            GuacamoleConnectionPermission,
-            entity_id=user_group_entity.entity_id,
-        )
-        assert len(permissions) == 1
-        assert permissions[0].connection_id == connection_id
-        assert permissions[0].permission == GuacamoleObjectPermissionType.READ
