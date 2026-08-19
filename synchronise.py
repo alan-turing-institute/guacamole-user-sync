@@ -11,6 +11,8 @@ logger = logging.getLogger("guacamole_user_sync")
 
 
 def main(  # noqa: PLR0913
+    guacamole_admin_group_name: str,
+    guacamole_user_group_name: str,
     ldap_bind_dn: str | None,
     ldap_bind_password: str | None,
     ldap_group_base_dn: str,
@@ -56,6 +58,8 @@ def main(  # noqa: PLR0913
     while True:
         # Run synchronisation step
         synchronise(
+            guacamole_admin_group_name=guacamole_admin_group_name,
+            guacamole_user_group_name=guacamole_user_group_name,
             ldap_client=ldap_client,
             ldap_group_query=ldap_group_query,
             ldap_user_query=ldap_user_query,
@@ -67,8 +71,10 @@ def main(  # noqa: PLR0913
         time.sleep(repeat_interval)
 
 
-def synchronise(
+def synchronise(  # noqa: PLR0913
     *,
+    guacamole_admin_group_name: str,
+    guacamole_user_group_name: str,
     ldap_client: LDAPClient,
     ldap_group_query: LDAPQuery,
     ldap_user_query: LDAPQuery,
@@ -84,13 +90,27 @@ def synchronise(
 
     try:
         postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
-        postgresql_client.update(groups=ldap_groups, users=ldap_users)
+        postgresql_client.update(
+            groups=ldap_groups,
+            users=ldap_users,
+            guacamole_admin_group_name=guacamole_admin_group_name,
+            guacamole_user_group_name=guacamole_user_group_name,
+        )
     except PostgreSQLError:
         logger.warning("PostgreSQL update failed")
         return
 
 
 if __name__ == "__main__":
+    if not (
+        guacamole_admin_group_name := os.getenv("GUACAMOLE_ADMIN_GROUP_NAME", None)
+    ):
+        msg = "GUACAMOLE_ADMIN_GROUP_NAME is not defined"
+        raise ValueError(msg)
+    if not (guacamole_user_group_name := os.getenv("GUACAMOLE_USER_GROUP_NAME", None)):
+        msg = "GUACAMOLE_USER_GROUP_NAME is not defined"
+        raise ValueError(msg)
+
     if not (ldap_host := os.getenv("LDAP_HOST", None)):
         msg = "LDAP_HOST is not defined"
         raise ValueError(msg)
@@ -129,6 +149,8 @@ if __name__ == "__main__":
     )
 
     main(
+        guacamole_admin_group_name=guacamole_admin_group_name,
+        guacamole_user_group_name=guacamole_user_group_name,
         ldap_bind_dn=os.getenv("LDAP_BIND_DN", None),
         ldap_bind_password=os.getenv("LDAP_BIND_PASSWORD", None),
         ldap_group_base_dn=ldap_group_base_dn,

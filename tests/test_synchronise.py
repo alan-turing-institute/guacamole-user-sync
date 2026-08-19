@@ -18,6 +18,7 @@ from guacamole_user_sync.postgresql.orm import (
     GuacamoleConnectionPermission,
     GuacamoleEntity,
     GuacamoleEntityType,
+    GuacamoleObjectPermissionType,
     GuacamoleUser,
     GuacamoleUserGroup,
 )
@@ -29,6 +30,9 @@ from .mocks import (
     MockLDAPUserEntry,
 )
 
+ADMIN_GROUP_NAME = "magistrates"
+USER_GROUP_NAME = "plaintiffs"
+
 
 def _skip_ensure_schema(_schema_version: SchemaVersion) -> None:
     """No-op: the fixture backend already has the schema built.
@@ -39,10 +43,11 @@ def _skip_ensure_schema(_schema_version: SchemaVersion) -> None:
 
 
 class TestSynchroniseRecoveryAfterLDAPBlip:
-    """Diagnose issue #2480.
+    """Verify the fix for issue #2480.
 
-    An LDAP blip deletes connection permissions via cascade, and LDAP
-    recovery does not restore them.
+    An LDAP blip still deletes connection permissions via cascade, but the
+    admin/user group connection permissions are restored automatically on
+    the next successful sync cycle.
     """
 
     client_kwargs: ClassVar[dict[str, Any]] = {
@@ -58,23 +63,36 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         backend: PostgreSQLBackend,
         postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+        postgresql_model_guacamoleusergroup_admin_fixture: list[GuacamoleUserGroup],
         postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
         postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
-        postgresql_model_guacamoleconnectionpermission_fixture: list[
-            GuacamoleConnectionPermission
-        ],
     ) -> None:
-        """Seed one group, one user, and a connection grant for that user."""
+        """Seed the user/admin groups, one user, a connection, and its grant."""
         group_entity = postgresql_model_guacamoleentity_user_group_fixture[
             2
         ]  # plaintiffs
+        admin_group_entity = postgresql_model_guacamoleentity_admin_group_fixture[
+            0
+        ]  # magistrates
         user_entity = postgresql_model_guacamoleentity_user_fixture[0]  # aulus.agerius
-        backend.add_all([group_entity, user_entity])
+        backend.add_all([group_entity, admin_group_entity, user_entity])
         backend.add_all([postgresql_model_guacamoleusergroup_fixture[2]])
+        backend.add_all(postgresql_model_guacamoleusergroup_admin_fixture)
         backend.add_all([postgresql_model_guacamoleuser_fixture[0]])
         backend.add_all(postgresql_model_guacamoleconnection_fixture)
-        backend.add_all(postgresql_model_guacamoleconnectionpermission_fixture)
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=group_entity.entity_id,
+                    connection_id=postgresql_model_guacamoleconnection_fixture[
+                        0
+                    ].connection_id,
+                    permission=GuacamoleObjectPermissionType.READ,
+                ),
+            ],
+        )
 
     def patch_ldap_connect(
         self,
@@ -95,34 +113,52 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         )
         monkeypatch.setattr(LDAPClient, "connect", lambda _: next(connections))
 
-    def test_connection_permission_not_restored_after_ldap_recovers(  # noqa: PLR0913
+    def run_synchronise(
+        self,
+        ldap_client: LDAPClient,
+        ldap_group_query: LDAPQuery,
+        ldap_user_query: LDAPQuery,
+        postgresql_client: PostgreSQLClient,
+    ) -> None:
+        """Run `synchronise()` with this test's admin/user group names."""
+        synchronise.synchronise(
+            guacamole_admin_group_name=ADMIN_GROUP_NAME,
+            guacamole_user_group_name=USER_GROUP_NAME,
+            ldap_client=ldap_client,
+            ldap_group_query=ldap_group_query,
+            ldap_user_query=ldap_user_query,
+            postgresql_client=postgresql_client,
+        )
+
+    def test_connection_permission_restored_after_ldap_recovers(  # noqa: PLR0913
         self,
         postgresql_sqlite_backend_fixture: PostgreSQLBackend,
         postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
         postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+        postgresql_model_guacamoleusergroup_admin_fixture: list[GuacamoleUserGroup],
         postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
         postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
-        postgresql_model_guacamoleconnectionpermission_fixture: list[
-            GuacamoleConnectionPermission
-        ],
         ldap_query_groups_fixture: LDAPQuery,
         ldap_query_users_fixture: LDAPQuery,
         ldap_response_groups_fixture: list[MockLDAPGroupEntry],
         ldap_response_users_fixture: list[MockLDAPUserEntry],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        # --- Arrange: one group, one user, and a connection grant for that
-        # user, inserted directly against the SQLite-backed schema fixture ---
+        # --- Arrange: the user group ("plaintiffs"), the admin group
+        # ("magistrates"), one user, a connection, and a READ grant for the
+        # user group on that connection ---
         backend = postgresql_sqlite_backend_fixture
         self.seed_database(
             backend,
             postgresql_model_guacamoleentity_user_group_fixture,
             postgresql_model_guacamoleentity_user_fixture,
+            postgresql_model_guacamoleentity_admin_group_fixture,
             postgresql_model_guacamoleusergroup_fixture,
+            postgresql_model_guacamoleusergroup_admin_fixture,
             postgresql_model_guacamoleuser_fixture,
             postgresql_model_guacamoleconnection_fixture,
-            postgresql_model_guacamoleconnectionpermission_fixture,
         )
 
         postgresql_client = PostgreSQLClient(**self.client_kwargs)
@@ -133,11 +169,11 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
 
         # --- Act: simulate a blip where LDAP returns 0 groups and 0 users ---
         self.patch_ldap_connect(monkeypatch, [], [])
-        synchronise.synchronise(
-            ldap_client=ldap_client,
-            ldap_group_query=ldap_query_groups_fixture,
-            ldap_user_query=ldap_query_users_fixture,
-            postgresql_client=postgresql_client,
+        self.run_synchronise(
+            ldap_client,
+            ldap_query_groups_fixture,
+            ldap_query_users_fixture,
+            postgresql_client,
         )
 
         # --- Assert: entities and connection permissions are cleared, but
@@ -149,11 +185,12 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         assert surviving_connections[0].connection_id == 1
         assert surviving_connections[0].connection_name == "rome-vm-1"
 
-        # --- Act: simulate LDAP recovery, returning the same group/user ---
+        # --- Act: simulate LDAP recovery, returning the user group and user
+        # again (the admin group, "magistrates", does not come back) ---
         recovered_group_entries = [
             entry
             for entry in ldap_response_groups_fixture
-            if entry.cn.value == "plaintiffs"
+            if entry.cn.value == USER_GROUP_NAME
         ]
         recovered_user_entries = [
             entry
@@ -165,34 +202,98 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
             recovered_group_entries,
             recovered_user_entries,
         )
-        synchronise.synchronise(
-            ldap_client=ldap_client,
-            ldap_group_query=ldap_query_groups_fixture,
-            ldap_user_query=ldap_query_users_fixture,
-            postgresql_client=postgresql_client,
+        self.run_synchronise(
+            ldap_client,
+            ldap_query_groups_fixture,
+            ldap_query_users_fixture,
+            postgresql_client,
         )
 
-        # --- Assert: the group/user entities come back (under new entity
-        # IDs), the connection is still untouched, but the connection
-        # permission is not restored ---
+        # --- Assert: the user group/user entities come back (under new
+        # entity IDs; "magistrates" does not, since LDAP didn't return it),
+        # the connection is still untouched, and the connection permission
+        # is restored against the recovered group's new entity_id ---
         recovered_entities = backend.query(GuacamoleEntity)
         assert {(entity.name, entity.type) for entity in recovered_entities} == {
-            ("plaintiffs", GuacamoleEntityType.USER_GROUP),
+            (USER_GROUP_NAME, GuacamoleEntityType.USER_GROUP),
             ("aulus.agerius@rome.la", GuacamoleEntityType.USER),
         }
         connections_after_recovery = backend.query(GuacamoleConnection)
         assert len(connections_after_recovery) == 1
         assert connections_after_recovery[0].connection_id == 1
 
-        new_user_entity_id = next(
+        new_group_entity_id = next(
             entity.entity_id
             for entity in recovered_entities
-            if entity.name == "aulus.agerius@rome.la"
+            if entity.name == USER_GROUP_NAME
         )
-        # Expected to fail against current code: issue #2480, connection
-        # permissions are cascade-deleted by an LDAP blip and never restored.
         restored_permissions = backend.query(
             GuacamoleConnectionPermission,
-            entity_id=new_user_entity_id,
+            entity_id=new_group_entity_id,
         )
-        assert restored_permissions
+        assert len(restored_permissions) == 1
+        assert restored_permissions[0].connection_id == 1
+        assert restored_permissions[0].permission == GuacamoleObjectPermissionType.READ
+
+        # --- Act: run synchronise() again against the same, still-recovered
+        # LDAP data (steady state, no entity churn this time) ---
+        self.patch_ldap_connect(
+            monkeypatch,
+            recovered_group_entries,
+            recovered_user_entries,
+        )
+        self.run_synchronise(
+            ldap_client,
+            ldap_query_groups_fixture,
+            ldap_query_users_fixture,
+            postgresql_client,
+        )
+
+        # --- Assert: re-observing identical data is idempotent - the same
+        # single grant survives unchanged, proving that granting a
+        # permission that already exists does not fail or duplicate it ---
+        steady_state_permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=new_group_entity_id,
+        )
+        assert len(steady_state_permissions) == 1
+        assert steady_state_permissions[0].connection_id == 1
+        assert (
+            steady_state_permissions[0].permission == GuacamoleObjectPermissionType.READ
+        )
+
+        # --- Arrange: manually grant the user group an extra permission it
+        # shouldn't have (e.g. someone edits it directly in the Guacamole
+        # UI) ---
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=new_group_entity_id,
+                    connection_id=1,
+                    permission=GuacamoleObjectPermissionType.UPDATE,
+                ),
+            ],
+        )
+
+        # --- Act: run synchronise() again with the same LDAP data ---
+        self.patch_ldap_connect(
+            monkeypatch,
+            recovered_group_entries,
+            recovered_user_entries,
+        )
+        self.run_synchronise(
+            ldap_client,
+            ldap_query_groups_fixture,
+            ldap_query_users_fixture,
+            postgresql_client,
+        )
+
+        # --- Assert: the extra permission is removed, enforcing that the
+        # user group has exactly READ, no more ---
+        enforced_permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=new_group_entity_id,
+        )
+        assert len(enforced_permissions) == 1
+        assert enforced_permissions[0].connection_id == 1
+        assert enforced_permissions[0].permission == GuacamoleObjectPermissionType.READ

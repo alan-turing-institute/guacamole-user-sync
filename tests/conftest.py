@@ -15,10 +15,8 @@ from guacamole_user_sync.postgresql import (
 )
 from guacamole_user_sync.postgresql.orm import (
     GuacamoleConnection,
-    GuacamoleConnectionPermission,
     GuacamoleEntity,
     GuacamoleEntityType,
-    GuacamoleObjectPermissionType,
     GuacamoleUser,
     GuacamoleUserGroup,
 )
@@ -217,25 +215,33 @@ def postgresql_model_guacamoleusergroup_fixture() -> list[GuacamoleUserGroup]:
 
 
 @pytest.fixture
+def postgresql_model_guacamoleentity_admin_group_fixture() -> list[GuacamoleEntity]:
+    return [
+        GuacamoleEntity(
+            entity_id=6,
+            name="magistrates",
+            type=GuacamoleEntityType.USER_GROUP,
+        ),
+    ]
+
+
+@pytest.fixture
+def postgresql_model_guacamoleusergroup_admin_fixture() -> list[GuacamoleUserGroup]:
+    return [
+        GuacamoleUserGroup(
+            entity_id=6,
+            user_group_id=16,
+        ),
+    ]
+
+
+@pytest.fixture
 def postgresql_model_guacamoleconnection_fixture() -> list[GuacamoleConnection]:
     return [
         GuacamoleConnection(
             connection_id=1,
             connection_name="rome-vm-1",
             protocol="vnc",
-        ),
-    ]
-
-
-@pytest.fixture
-def postgresql_model_guacamoleconnectionpermission_fixture(
-    postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
-) -> list[GuacamoleConnectionPermission]:
-    return [
-        GuacamoleConnectionPermission(
-            entity_id=postgresql_model_guacamoleentity_user_fixture[0].entity_id,
-            connection_id=1,
-            permission=GuacamoleObjectPermissionType.READ,
         ),
     ]
 

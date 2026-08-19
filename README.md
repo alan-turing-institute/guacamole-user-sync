@@ -11,6 +11,8 @@ You can run this Docker image as follows
 
 ```console
 $ docker run -it \
+    -e GUACAMOLE_ADMIN_GROUP_NAME=$(name of your Guacamole administrators' LDAP group) \
+    -e GUACAMOLE_USER_GROUP_NAME=$(name of your Guacamole users' LDAP group) \
     -e LDAP_HOST=$(your LDAP server host) \
     -e LDAP_GROUP_BASE_DN=$(your LDAP group DN) \
     -e LDAP_GROUP_FILTER=$(your LDAP group filter) \
@@ -32,6 +34,8 @@ For example, a simple user base DN might look something like `OU=users,DC=exampl
 ## Environment variables
 
 - `DEBUG`: Enable debug output (default: 'False')
+- `GUACAMOLE_ADMIN_GROUP_NAME`: Name of the LDAP group whose members are granted full control (`READ`, `UPDATE`, `DELETE`, `ADMINISTER`) of every Guacamole connection. Must match the name of a group already selected by `LDAP_GROUP_BASE_DN`/`LDAP_GROUP_FILTER`.
+- `GUACAMOLE_USER_GROUP_NAME`: Name of the LDAP group whose members are granted read-only (`READ`) access to every Guacamole connection. Must match the name of a group already selected by `LDAP_GROUP_BASE_DN`/`LDAP_GROUP_FILTER`.
 - `LDAP_BIND_DN`: (Optional) distinguished name of LDAP bind user
 - `LDAP_BIND_PASSWORD`: (Optional) password of LDAP bind user
 - `LDAP_GROUP_BASE_DN`: Base DN for groups
@@ -65,6 +69,8 @@ Run the Docker image you have just built with
 
 ```console
 $ docker run -it \
+    -e GUACAMOLE_ADMIN_GROUP_NAME=$(name of your Guacamole administrators' LDAP group) \
+    -e GUACAMOLE_USER_GROUP_NAME=$(name of your Guacamole users' LDAP group) \
     -e LDAP_HOST=$(your LDAP server host) \
     -e LDAP_GROUP_BASE_DN=$(your LDAP group DN) \
     -e LDAP_GROUP_FILTER=$(your LDAP group filter) \

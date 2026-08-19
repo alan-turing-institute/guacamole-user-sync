@@ -510,6 +510,8 @@ class TestPostgreSQLClient:
             client.update(
                 groups=ldap_model_groups_fixture,
                 users=ldap_model_users_fixture,
+                guacamole_admin_group_name="admins",
+                guacamole_user_group_name="users",
             )
             for output_line in (
                 "Ensuring that 3 group(s) are registered",
@@ -541,6 +543,10 @@ class TestPostgreSQLClient:
                 "Group 'plaintiffs' has 1 member(s).",
                 " ... group member 'aulus.agerius@rome.la' has entity_id 'None'",
                 "... creating 4 user/group assignments.",
+                "Could not find group 'admins': skipping its connection "
+                "permissions this cycle.",
+                "Could not find group 'users': skipping its connection "
+                "permissions this cycle.",
             ):
                 assert output_line in caplog.text
 
