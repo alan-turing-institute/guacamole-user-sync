@@ -187,6 +187,34 @@ class TestPostgreSQLBackend:
         assert filter_by_kwargs["type"] == GuacamoleEntityType.USER
 
 
+class TestPostgreSQLBackendWithRealSchema:
+    """Smoke-test PostgreSQLBackend against the real Guacamole schema.
+
+    Uses `postgresql_sqlite_backend_fixture` instead of a mocked session.
+    """
+
+    def test_add_all_then_query_round_trip(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+    ) -> None:
+        backend = postgresql_sqlite_backend_fixture
+        backend.add_all(
+            [
+                GuacamoleEntity(
+                    entity_id=1,
+                    name="aulus.agerius@rome.la",
+                    type=GuacamoleEntityType.USER,
+                ),
+            ],
+        )
+
+        results = backend.query(GuacamoleEntity, name="aulus.agerius@rome.la")
+
+        assert len(results) == 1
+        assert results[0].entity_id == 1
+        assert results[0].type == GuacamoleEntityType.USER
+
+
 class TestPostgreSQLClient:
     """Test PostgreSQLClient."""
 
