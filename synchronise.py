@@ -54,7 +54,7 @@ def parse_group_permissions(
 
 
 def main(  # noqa: PLR0913
-    guacamole_group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
+    guacamole_group_permissions: dict[str, list[GuacamoleObjectPermissionType]] | None,
     ldap_bind_dn: str | None,
     ldap_bind_password: str | None,
     ldap_group_base_dn: str,
@@ -114,7 +114,7 @@ def main(  # noqa: PLR0913
 
 def synchronise(
     *,
-    guacamole_group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
+    guacamole_group_permissions: dict[str, list[GuacamoleObjectPermissionType]] | None,
     ldap_client: LDAPClient,
     ldap_group_query: LDAPQuery,
     ldap_user_query: LDAPQuery,
@@ -141,16 +141,11 @@ def synchronise(
 
 
 if __name__ == "__main__":
-    if not (
-        guacamole_group_permissions_raw := os.getenv(
-            "GUACAMOLE_GROUP_PERMISSIONS",
-            None,
-        )
-    ):
-        msg = "GUACAMOLE_GROUP_PERMISSIONS is not defined"
-        raise ValueError(msg)
-    guacamole_group_permissions = parse_group_permissions(
-        guacamole_group_permissions_raw,
+    guacamole_group_permissions_raw = os.getenv("GUACAMOLE_GROUP_PERMISSIONS", None)
+    guacamole_group_permissions = (
+        parse_group_permissions(guacamole_group_permissions_raw)
+        if guacamole_group_permissions_raw
+        else None
     )
 
     if not (ldap_host := os.getenv("LDAP_HOST", None)):

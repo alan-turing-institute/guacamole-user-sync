@@ -33,7 +33,7 @@ For example, a simple user base DN might look something like `OU=users,DC=exampl
 ## Environment variables
 
 - `DEBUG`: Enable debug output (default: 'False')
-- `GUACAMOLE_GROUP_PERMISSIONS`: Semicolon-separated list of `group_name=PERMISSION1,PERMISSION2,...` entries, e.g. `admins=READ,UPDATE,DELETE,ADMINISTER;users=READ;auditors=READ`. Each named group is granted exactly the listed permissions on every Guacamole connection; a group not listed gets none. Valid permission names are `READ`, `UPDATE`, `DELETE`, `ADMINISTER`. Each group name must match the name of a group already selected by `LDAP_GROUP_BASE_DN`/`LDAP_GROUP_FILTER`.
+- `GUACAMOLE_GROUP_PERMISSIONS`: (Optional) semicolon-separated list of `group_name=PERMISSION1,PERMISSION2,...` entries, e.g. `admins=READ,UPDATE,DELETE,ADMINISTER;users=READ;auditors=READ`. Each named group is granted exactly the listed permissions on every Guacamole connection; a group not listed gets none. Valid permission names are `READ`, `UPDATE`, `DELETE`, `ADMINISTER`. Each group name must match the name of a group already selected by `LDAP_GROUP_BASE_DN`/`LDAP_GROUP_FILTER`. If unset, `guacamole_connection_permission` is left completely untouched by the sync (no grants added or revoked).
 - `LDAP_BIND_DN`: (Optional) distinguished name of LDAP bind user
 - `LDAP_BIND_PASSWORD`: (Optional) password of LDAP bind user
 - `LDAP_GROUP_BASE_DN`: Base DN for groups

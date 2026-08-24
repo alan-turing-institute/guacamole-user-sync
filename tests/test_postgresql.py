@@ -440,6 +440,50 @@ class TestPostgreSQLBackendWithRealSchema:
             == []
         )
 
+    def test_ensure_connection_permissions_none_is_a_no_op(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """`group_permissions=None` (unset env var) must not touch anything.
+
+        Even a group that would otherwise look "stale" (holding permissions
+        but absent from an explicit mapping) must be left untouched.
+        """
+        backend = postgresql_sqlite_backend_fixture
+        group_entity = postgresql_model_guacamoleentity_user_group_fixture[2]
+        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
+        backend.add_all([group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=group_entity.entity_id,
+                    connection_id=connection_id,
+                    permission=GuacamoleObjectPermissionType.READ,
+                ),
+            ],
+        )
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+        client.ensure_connection_permissions(group_permissions=None)
+
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=group_entity.entity_id,
+        )
+        assert len(permissions) == 1
+        assert permissions[0].connection_id == connection_id
+        assert permissions[0].permission == GuacamoleObjectPermissionType.READ
+
 
 class TestPostgreSQLClient:
     """Test PostgreSQLClient."""

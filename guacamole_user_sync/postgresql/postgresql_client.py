@@ -154,7 +154,7 @@ class PostgreSQLClient:
         *,
         groups: list[LDAPGroup],
         users: list[LDAPUser],
-        group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]] | None,
     ) -> None:
         """Update the relevant tables to match lists of LDAP users and groups."""
         self.update_groups(groups)
@@ -167,14 +167,20 @@ class PostgreSQLClient:
     def ensure_connection_permissions(
         self,
         *,
-        group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]] | None,
     ) -> None:
         """Grant each configured group its permissions on every connection.
 
         Also revokes all connection permissions for any group that currently
         holds some but is no longer present in `group_permissions` (e.g. it
         was removed from `GUACAMOLE_GROUP_PERMISSIONS` since the last sync).
+
+        `group_permissions=None` means "not configured" and is a complete
+        no-op, so that leaving `GUACAMOLE_GROUP_PERMISSIONS` unset never
+        touches `guacamole_connection_permission` (backwards compatibility).
         """
+        if group_permissions is None:
+            return
         for group_name in self._groups_with_stale_permissions(group_permissions):
             self._reconcile_group_connection_permissions(group_name, [])
         for group_name, permissions in group_permissions.items():

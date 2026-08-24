@@ -255,6 +255,81 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         assert restored_permissions[0].connection_id == 1
         assert restored_permissions[0].permission == GuacamoleObjectPermissionType.READ
 
+    def test_connection_permission_untouched_when_group_permissions_unset(  # noqa: PLR0913
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_user_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleusergroup_fixture: list[GuacamoleUserGroup],
+        postgresql_model_guacamoleusergroup_admin_fixture: list[GuacamoleUserGroup],
+        postgresql_model_guacamoleuser_fixture: list[GuacamoleUser],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+        ldap_query_groups_fixture: LDAPQuery,
+        ldap_query_users_fixture: LDAPQuery,
+        ldap_response_groups_fixture: list[MockLDAPGroupEntry],
+        ldap_response_users_fixture: list[MockLDAPUserEntry],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """`guacamole_group_permissions=None` (unset env var) must be a no-op.
+
+        An already-granted permission must survive a sync cycle unchanged
+        when the group is still present in LDAP but no group permissions
+        are configured at all.
+        """
+        backend = postgresql_sqlite_backend_fixture
+        self.seed_database(
+            backend,
+            postgresql_model_guacamoleentity_user_group_fixture,
+            postgresql_model_guacamoleentity_user_fixture,
+            postgresql_model_guacamoleentity_admin_group_fixture,
+            postgresql_model_guacamoleusergroup_fixture,
+            postgresql_model_guacamoleusergroup_admin_fixture,
+            postgresql_model_guacamoleuser_fixture,
+            postgresql_model_guacamoleconnection_fixture,
+        )
+
+        postgresql_client = PostgreSQLClient(**self.client_kwargs)
+        postgresql_client.backend = backend
+        postgresql_client.ensure_schema = _skip_ensure_schema  # type: ignore[assignment]
+
+        ldap_client = LDAPClient("test-host", auto_bind=False)
+
+        # LDAP still reports the "plaintiffs" group and its member, so the
+        # group entity (and thus its entity_id) survives `update_groups()`.
+        group_entries = [
+            entry
+            for entry in ldap_response_groups_fixture
+            if entry.cn.value == USER_GROUP_NAME
+        ]
+        user_entries = [
+            entry
+            for entry in ldap_response_users_fixture
+            if entry.uid.value == "aulus.agerius"
+        ]
+        self.patch_ldap_connect(monkeypatch, group_entries, user_entries)
+
+        synchronise.synchronise(
+            guacamole_group_permissions=None,
+            ldap_client=ldap_client,
+            ldap_group_query=ldap_query_groups_fixture,
+            ldap_user_query=ldap_query_users_fixture,
+            postgresql_client=postgresql_client,
+        )
+
+        group_entity_id = next(
+            entity.entity_id
+            for entity in backend.query(GuacamoleEntity)
+            if entity.name == USER_GROUP_NAME
+        )
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=group_entity_id,
+        )
+        assert len(permissions) == 1
+        assert permissions[0].connection_id == 1
+        assert permissions[0].permission == GuacamoleObjectPermissionType.READ
+
 
 def _fail_if_constructed(*_args: object, **_kwargs: object) -> None:
     msg = "Client constructed before GUACAMOLE_GROUP_PERMISSIONS was validated"
@@ -276,16 +351,24 @@ class TestSynchroniseStartup:
         monkeypatch.setattr(LDAPClient, "__init__", _fail_if_constructed)
         monkeypatch.setattr(PostgreSQLClient, "__init__", _fail_if_constructed)
 
-    def test_missing_group_permissions_raises(
+    def test_missing_group_permissions_does_not_raise(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Unset `GUACAMOLE_GROUP_PERMISSIONS` must not fail startup.
+
+        It's optional now (backwards compatibility, see
+        `specs/2480-guacamole-connections-dissapear/05-refactor-permissions.md`),
+        so startup must proceed all the way to constructing clients instead
+        of raising `ValueError` — proved here by the deliberate
+        `AssertionError` from `_fail_if_constructed` firing instead.
+        """
         monkeypatch.delenv("GUACAMOLE_GROUP_PERMISSIONS", raising=False)
         self.prepare_env(monkeypatch)
 
         with pytest.raises(
-            ValueError,
-            match="GUACAMOLE_GROUP_PERMISSIONS is not defined",
+            AssertionError,
+            match="Client constructed",
         ):
             runpy.run_path(synchronise.__file__, run_name="__main__")
 
