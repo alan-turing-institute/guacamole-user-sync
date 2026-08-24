@@ -26,14 +26,6 @@ from .sql import GuacamoleSchema, SchemaVersion
 
 logger = logging.getLogger("guacamole_user_sync")
 
-ADMIN_CONNECTION_PERMISSIONS = [
-    GuacamoleObjectPermissionType.READ,
-    GuacamoleObjectPermissionType.UPDATE,
-    GuacamoleObjectPermissionType.DELETE,
-    GuacamoleObjectPermissionType.ADMINISTER,
-]
-USER_CONNECTION_PERMISSIONS = [GuacamoleObjectPermissionType.READ]
-
 
 class PostgreSQLClient:
     """Client for connecting to a PostgreSQL database."""
@@ -162,8 +154,7 @@ class PostgreSQLClient:
         *,
         groups: list[LDAPGroup],
         users: list[LDAPUser],
-        guacamole_admin_group_name: str,
-        guacamole_user_group_name: str,
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
     ) -> None:
         """Update the relevant tables to match lists of LDAP users and groups."""
         self.update_groups(groups)
@@ -171,26 +162,46 @@ class PostgreSQLClient:
         self.update_group_entities()
         self.update_user_entities(users)
         self.assign_users_to_groups(groups, users)
-        self.ensure_connection_permissions(
-            admin_group_name=guacamole_admin_group_name,
-            user_group_name=guacamole_user_group_name,
-        )
+        self.ensure_connection_permissions(group_permissions=group_permissions)
 
     def ensure_connection_permissions(
         self,
         *,
-        admin_group_name: str,
-        user_group_name: str,
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
     ) -> None:
-        """Grant the admin/user groups their permissions on every connection."""
-        self._reconcile_group_connection_permissions(
-            admin_group_name,
-            ADMIN_CONNECTION_PERMISSIONS,
-        )
-        self._reconcile_group_connection_permissions(
-            user_group_name,
-            USER_CONNECTION_PERMISSIONS,
-        )
+        """Grant each configured group its permissions on every connection.
+
+        Also revokes all connection permissions for any group that currently
+        holds some but is no longer present in `group_permissions` (e.g. it
+        was removed from `GUACAMOLE_GROUP_PERMISSIONS` since the last sync).
+        """
+        for group_name in self._groups_with_stale_permissions(group_permissions):
+            self._reconcile_group_connection_permissions(group_name, [])
+        for group_name, permissions in group_permissions.items():
+            self._reconcile_group_connection_permissions(group_name, permissions)
+
+    def _groups_with_stale_permissions(
+        self,
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
+    ) -> set[str]:
+        """Names of user groups holding connection permissions to revoke.
+
+        These are entities with at least one `guacamole_connection_permission`
+        row whose group name is absent from `group_permissions`.
+        """
+        entity_ids_with_permissions = {
+            grant.entity_id
+            for grant in self.backend.query(GuacamoleConnectionPermission)
+        }
+        return {
+            entity.name
+            for entity in self.backend.query(
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER_GROUP,
+            )
+            if entity.entity_id in entity_ids_with_permissions
+            and entity.name not in group_permissions
+        }
 
     def _reconcile_group_connection_permissions(
         self,

@@ -1,3 +1,4 @@
+import runpy
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
@@ -32,6 +33,16 @@ from .mocks import (
 
 ADMIN_GROUP_NAME = "magistrates"
 USER_GROUP_NAME = "plaintiffs"
+GROUP_PERMISSIONS = {
+    ADMIN_GROUP_NAME: [
+        GuacamoleObjectPermissionType.READ,
+        GuacamoleObjectPermissionType.UPDATE,
+        GuacamoleObjectPermissionType.DELETE,
+        GuacamoleObjectPermissionType.ADMINISTER,
+    ],
+    USER_GROUP_NAME: [GuacamoleObjectPermissionType.READ],
+    "auditors": [GuacamoleObjectPermissionType.READ],
+}
 
 
 def _skip_ensure_schema(_schema_version: SchemaVersion) -> None:
@@ -120,10 +131,9 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         ldap_user_query: LDAPQuery,
         postgresql_client: PostgreSQLClient,
     ) -> None:
-        """Run `synchronise()` with this test's admin/user group names."""
+        """Run `synchronise()` with this test's group permissions mapping."""
         synchronise.synchronise(
-            guacamole_admin_group_name=ADMIN_GROUP_NAME,
-            guacamole_user_group_name=USER_GROUP_NAME,
+            guacamole_group_permissions=GROUP_PERMISSIONS,
             ldap_client=ldap_client,
             ldap_group_query=ldap_group_query,
             ldap_user_query=ldap_user_query,
@@ -234,3 +244,59 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         assert len(restored_permissions) == 1
         assert restored_permissions[0].connection_id == 1
         assert restored_permissions[0].permission == GuacamoleObjectPermissionType.READ
+
+
+OTHER_REQUIRED_ENV_VARS: dict[str, str] = {
+    "LDAP_HOST": "ldap-host",
+    "LDAP_GROUP_BASE_DN": "OU=groups,DC=rome,DC=la",
+    "LDAP_GROUP_FILTER": "(objectClass=posixGroup)",
+    "LDAP_USER_BASE_DN": "OU=users,DC=rome,DC=la",
+    "LDAP_USER_FILTER": "(objectClass=posixAccount)",
+    "POSTGRESQL_HOST": "postgresql-host",
+    "POSTGRESQL_PASSWORD": "postgresql-password",
+    "POSTGRESQL_USERNAME": "postgresql-username",
+}
+
+
+def _fail_if_constructed(*_args: object, **_kwargs: object) -> None:
+    msg = "Client constructed before GUACAMOLE_GROUP_PERMISSIONS was validated"
+    raise AssertionError(msg)
+
+
+class TestSynchroniseStartup:
+    """Verify GUACAMOLE_GROUP_PERMISSIONS is validated before the sync loop starts."""
+
+    def prepare_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Set every other required env var and block client construction.
+
+        This isolates the assertions below to `GUACAMOLE_GROUP_PERMISSIONS`
+        validation and proves it happens before an LDAPClient/PostgreSQLClient
+        is ever constructed.
+        """
+        for name, value in OTHER_REQUIRED_ENV_VARS.items():
+            monkeypatch.setenv(name, value)
+        monkeypatch.setattr(LDAPClient, "__init__", _fail_if_constructed)
+        monkeypatch.setattr(PostgreSQLClient, "__init__", _fail_if_constructed)
+
+    def test_missing_group_permissions_raises(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("GUACAMOLE_GROUP_PERMISSIONS", raising=False)
+        self.prepare_env(monkeypatch)
+
+        with pytest.raises(
+            ValueError,
+            match="GUACAMOLE_GROUP_PERMISSIONS is not defined",
+        ):
+            runpy.run_path(synchronise.__file__, run_name="__main__")
+
+    def test_malformed_group_permissions_raises(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("GUACAMOLE_GROUP_PERMISSIONS", "NOT_VALID")
+        self.prepare_env(monkeypatch)
+
+        with pytest.raises(ValueError, match="missing '='"):
+            runpy.run_path(synchronise.__file__, run_name="__main__")

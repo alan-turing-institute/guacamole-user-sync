@@ -5,14 +5,18 @@ import time
 
 from guacamole_user_sync.ldap import LDAPClient
 from guacamole_user_sync.models import LDAPError, LDAPQuery, PostgreSQLError
-from guacamole_user_sync.postgresql import PostgreSQLClient, SchemaVersion
+from guacamole_user_sync.postgresql import (
+    GuacamoleObjectPermissionType,
+    PostgreSQLClient,
+    SchemaVersion,
+    parse_group_permissions,
+)
 
 logger = logging.getLogger("guacamole_user_sync")
 
 
 def main(  # noqa: PLR0913
-    guacamole_admin_group_name: str,
-    guacamole_user_group_name: str,
+    guacamole_group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
     ldap_bind_dn: str | None,
     ldap_bind_password: str | None,
     ldap_group_base_dn: str,
@@ -58,8 +62,7 @@ def main(  # noqa: PLR0913
     while True:
         # Run synchronisation step
         synchronise(
-            guacamole_admin_group_name=guacamole_admin_group_name,
-            guacamole_user_group_name=guacamole_user_group_name,
+            guacamole_group_permissions=guacamole_group_permissions,
             ldap_client=ldap_client,
             ldap_group_query=ldap_group_query,
             ldap_user_query=ldap_user_query,
@@ -71,10 +74,9 @@ def main(  # noqa: PLR0913
         time.sleep(repeat_interval)
 
 
-def synchronise(  # noqa: PLR0913
+def synchronise(
     *,
-    guacamole_admin_group_name: str,
-    guacamole_user_group_name: str,
+    guacamole_group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
     ldap_client: LDAPClient,
     ldap_group_query: LDAPQuery,
     ldap_user_query: LDAPQuery,
@@ -93,8 +95,7 @@ def synchronise(  # noqa: PLR0913
         postgresql_client.update(
             groups=ldap_groups,
             users=ldap_users,
-            guacamole_admin_group_name=guacamole_admin_group_name,
-            guacamole_user_group_name=guacamole_user_group_name,
+            group_permissions=guacamole_group_permissions,
         )
     except PostgreSQLError:
         logger.warning("PostgreSQL update failed")
@@ -103,13 +104,16 @@ def synchronise(  # noqa: PLR0913
 
 if __name__ == "__main__":
     if not (
-        guacamole_admin_group_name := os.getenv("GUACAMOLE_ADMIN_GROUP_NAME", None)
+        guacamole_group_permissions_raw := os.getenv(
+            "GUACAMOLE_GROUP_PERMISSIONS",
+            None,
+        )
     ):
-        msg = "GUACAMOLE_ADMIN_GROUP_NAME is not defined"
+        msg = "GUACAMOLE_GROUP_PERMISSIONS is not defined"
         raise ValueError(msg)
-    if not (guacamole_user_group_name := os.getenv("GUACAMOLE_USER_GROUP_NAME", None)):
-        msg = "GUACAMOLE_USER_GROUP_NAME is not defined"
-        raise ValueError(msg)
+    guacamole_group_permissions = parse_group_permissions(
+        guacamole_group_permissions_raw,
+    )
 
     if not (ldap_host := os.getenv("LDAP_HOST", None)):
         msg = "LDAP_HOST is not defined"
@@ -149,8 +153,7 @@ if __name__ == "__main__":
     )
 
     main(
-        guacamole_admin_group_name=guacamole_admin_group_name,
-        guacamole_user_group_name=guacamole_user_group_name,
+        guacamole_group_permissions=guacamole_group_permissions,
         ldap_bind_dn=os.getenv("LDAP_BIND_DN", None),
         ldap_bind_password=os.getenv("LDAP_BIND_PASSWORD", None),
         ldap_group_base_dn=ldap_group_base_dn,
