@@ -357,8 +357,8 @@ class TestSynchroniseStartup:
     ) -> None:
         """Unset `GUACAMOLE_GROUP_PERMISSIONS` must not fail startup.
 
-        It's optional now, so startup must proceed all the way to constructing clients instead
-        of raising `ValueError` — proved here by the deliberate
+        It's optional now, so startup must proceed all the way to constructing clients
+        instead of raising `ValueError` — proved here by the deliberate
         `AssertionError` from `_fail_if_constructed` firing instead.
         """
         monkeypatch.delenv("GUACAMOLE_GROUP_PERMISSIONS", raising=False)
