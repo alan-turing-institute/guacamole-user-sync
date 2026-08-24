@@ -197,7 +197,7 @@ class PostgreSQLClient:
         group_name: str,
         permissions: list[GuacamoleObjectPermissionType],
     ) -> None:
-        """Make one group's grants match `permissions` on every connection."""
+        """Set the connection permissions for `group_name` to `permissions`."""
         try:
             entity_id = next(
                 entity.entity_id
