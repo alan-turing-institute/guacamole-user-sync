@@ -21,45 +21,6 @@ class GuacamoleObjectPermissionType(enum.Enum):
     ADMINISTER = "ADMINISTER"
 
 
-def parse_group_permissions(
-    value: str,
-) -> dict[str, list[GuacamoleObjectPermissionType]]:
-    """Parse `name=PERM,PERM;name=PERM` into a group-name -> permissions map."""
-    group_permissions: dict[str, list[GuacamoleObjectPermissionType]] = {}
-    for raw_entry in value.split(";"):
-        entry = raw_entry.strip()
-        if not entry:
-            continue
-        if "=" not in entry:
-            msg = f"Invalid group permissions entry (missing '='): '{entry}'"
-            raise ValueError(msg)
-
-        group_name, permissions_csv = entry.split("=", 1)
-        group_name = group_name.strip()
-        if not group_name:
-            msg = f"Invalid group permissions entry (empty group name): '{entry}'"
-            raise ValueError(msg)
-        if group_name in group_permissions:
-            msg = f"Duplicate group name in group permissions: '{group_name}'"
-            raise ValueError(msg)
-
-        permissions: list[GuacamoleObjectPermissionType] = []
-        for raw_permission_name in permissions_csv.split(","):
-            permission_name = raw_permission_name.strip().upper()
-            if not permission_name:
-                continue
-            try:
-                permissions.append(GuacamoleObjectPermissionType[permission_name])
-            except KeyError:
-                msg = (
-                    f"Invalid permission '{permission_name}' for group "
-                    f"'{group_name}'"
-                )
-                raise ValueError(msg) from None
-        group_permissions[group_name] = permissions
-    return group_permissions
-
-
 class GuacamoleBase(DeclarativeBase):  # type: ignore[misc]
     """Guacamole database base table."""
 

@@ -43,6 +43,16 @@ GROUP_PERMISSIONS = {
     USER_GROUP_NAME: [GuacamoleObjectPermissionType.READ],
     "auditors": [GuacamoleObjectPermissionType.READ],
 }
+OTHER_REQUIRED_ENV_VARS: dict[str, str] = {
+    "LDAP_HOST": "ldap-host",
+    "LDAP_GROUP_BASE_DN": "OU=groups,DC=rome,DC=la",
+    "LDAP_GROUP_FILTER": "(objectClass=posixGroup)",
+    "LDAP_USER_BASE_DN": "OU=users,DC=rome,DC=la",
+    "LDAP_USER_FILTER": "(objectClass=posixAccount)",
+    "POSTGRESQL_HOST": "postgresql-host",
+    "POSTGRESQL_PASSWORD": "postgresql-password",
+    "POSTGRESQL_USERNAME": "postgresql-username",
+}
 
 
 def _skip_ensure_schema(_schema_version: SchemaVersion) -> None:
@@ -246,18 +256,6 @@ class TestSynchroniseRecoveryAfterLDAPBlip:
         assert restored_permissions[0].permission == GuacamoleObjectPermissionType.READ
 
 
-OTHER_REQUIRED_ENV_VARS: dict[str, str] = {
-    "LDAP_HOST": "ldap-host",
-    "LDAP_GROUP_BASE_DN": "OU=groups,DC=rome,DC=la",
-    "LDAP_GROUP_FILTER": "(objectClass=posixGroup)",
-    "LDAP_USER_BASE_DN": "OU=users,DC=rome,DC=la",
-    "LDAP_USER_FILTER": "(objectClass=posixAccount)",
-    "POSTGRESQL_HOST": "postgresql-host",
-    "POSTGRESQL_PASSWORD": "postgresql-password",
-    "POSTGRESQL_USERNAME": "postgresql-username",
-}
-
-
 def _fail_if_constructed(*_args: object, **_kwargs: object) -> None:
     msg = "Client constructed before GUACAMOLE_GROUP_PERMISSIONS was validated"
     raise AssertionError(msg)
@@ -300,3 +298,51 @@ class TestSynchroniseStartup:
 
         with pytest.raises(ValueError, match="missing '='"):
             runpy.run_path(synchronise.__file__, run_name="__main__")
+
+
+class TestParseGroupPermissions:
+    """Test `synchronise.parse_group_permissions`."""
+
+    def test_multiple_groups(self) -> None:
+        assert synchronise.parse_group_permissions(
+            "admins=READ,UPDATE,DELETE,ADMINISTER;users=READ;auditors=READ",
+        ) == {
+            "admins": [
+                GuacamoleObjectPermissionType.READ,
+                GuacamoleObjectPermissionType.UPDATE,
+                GuacamoleObjectPermissionType.DELETE,
+                GuacamoleObjectPermissionType.ADMINISTER,
+            ],
+            "users": [GuacamoleObjectPermissionType.READ],
+            "auditors": [GuacamoleObjectPermissionType.READ],
+        }
+
+    def test_empty_permissions_segment(self) -> None:
+        assert synchronise.parse_group_permissions("auditors=") == {"auditors": []}
+
+    def test_whitespace_and_casing_tolerance(self) -> None:
+        assert synchronise.parse_group_permissions(
+            " admins = read , update ; users=read;",
+        ) == {
+            "admins": [
+                GuacamoleObjectPermissionType.READ,
+                GuacamoleObjectPermissionType.UPDATE,
+            ],
+            "users": [GuacamoleObjectPermissionType.READ],
+        }
+
+    def test_duplicate_group_name_raises(self) -> None:
+        with pytest.raises(ValueError, match="Duplicate group name"):
+            synchronise.parse_group_permissions("admins=READ;admins=UPDATE")
+
+    def test_malformed_entry_raises(self) -> None:
+        with pytest.raises(ValueError, match="missing '='"):
+            synchronise.parse_group_permissions("NOT_VALID")
+
+    def test_empty_group_name_raises(self) -> None:
+        with pytest.raises(ValueError, match="empty group name"):
+            synchronise.parse_group_permissions("=READ")
+
+    def test_unknown_permission_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid permission"):
+            synchronise.parse_group_permissions("admins=NOT_A_PERMISSION")

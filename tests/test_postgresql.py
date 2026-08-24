@@ -24,7 +24,6 @@ from guacamole_user_sync.postgresql.orm import (
     GuacamoleObjectPermissionType,
     GuacamoleUser,
     GuacamoleUserGroup,
-    parse_group_permissions,
 )
 from guacamole_user_sync.postgresql.sql import SchemaVersion
 
@@ -440,54 +439,6 @@ class TestPostgreSQLBackendWithRealSchema:
             )
             == []
         )
-
-
-class TestParseGroupPermissions:
-    """Test `parse_group_permissions`."""
-
-    def test_multiple_groups(self) -> None:
-        assert parse_group_permissions(
-            "admins=READ,UPDATE,DELETE,ADMINISTER;users=READ;auditors=READ",
-        ) == {
-            "admins": [
-                GuacamoleObjectPermissionType.READ,
-                GuacamoleObjectPermissionType.UPDATE,
-                GuacamoleObjectPermissionType.DELETE,
-                GuacamoleObjectPermissionType.ADMINISTER,
-            ],
-            "users": [GuacamoleObjectPermissionType.READ],
-            "auditors": [GuacamoleObjectPermissionType.READ],
-        }
-
-    def test_empty_permissions_segment(self) -> None:
-        assert parse_group_permissions("auditors=") == {"auditors": []}
-
-    def test_whitespace_and_casing_tolerance(self) -> None:
-        assert parse_group_permissions(
-            " admins = read , update ; users=read;",
-        ) == {
-            "admins": [
-                GuacamoleObjectPermissionType.READ,
-                GuacamoleObjectPermissionType.UPDATE,
-            ],
-            "users": [GuacamoleObjectPermissionType.READ],
-        }
-
-    def test_duplicate_group_name_raises(self) -> None:
-        with pytest.raises(ValueError, match="Duplicate group name"):
-            parse_group_permissions("admins=READ;admins=UPDATE")
-
-    def test_malformed_entry_raises(self) -> None:
-        with pytest.raises(ValueError, match="missing '='"):
-            parse_group_permissions("NOT_VALID")
-
-    def test_empty_group_name_raises(self) -> None:
-        with pytest.raises(ValueError, match="empty group name"):
-            parse_group_permissions("=READ")
-
-    def test_unknown_permission_raises(self) -> None:
-        with pytest.raises(ValueError, match="Invalid permission"):
-            parse_group_permissions("admins=NOT_A_PERMISSION")
 
 
 class TestPostgreSQLClient:
