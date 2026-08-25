@@ -12,6 +12,15 @@ class GuacamoleEntityType(enum.Enum):
     USER_GROUP = "USER_GROUP"
 
 
+class GuacamoleObjectPermissionType(enum.Enum):
+    """Guacamole object permission enum."""
+
+    READ = "READ"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+    ADMINISTER = "ADMINISTER"
+
+
 class GuacamoleBase(DeclarativeBase):  # type: ignore[misc]
     """Guacamole database base table."""
 
@@ -57,3 +66,26 @@ class GuacamoleUserGroupMember(GuacamoleBase):
 
     user_group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     member_entity_id: Mapped[int] = mapped_column(Integer)
+
+
+class GuacamoleConnection(GuacamoleBase):
+    """Guacamole database GuacamoleConnection table."""
+
+    __tablename__ = "guacamole_connection"
+
+    connection_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connection_name: Mapped[str] = mapped_column(String(128))
+    protocol: Mapped[str] = mapped_column(String(32))
+
+
+class GuacamoleConnectionPermission(GuacamoleBase):
+    """Guacamole database GuacamoleConnectionPermission table."""
+
+    __tablename__ = "guacamole_connection_permission"
+
+    entity_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    connection_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    permission: Mapped[GuacamoleObjectPermissionType] = mapped_column(
+        Enum(GuacamoleObjectPermissionType, name="guacamole_object_permission_type"),
+        primary_key=True,
+    )

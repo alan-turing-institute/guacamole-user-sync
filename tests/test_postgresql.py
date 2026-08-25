@@ -17,8 +17,11 @@ from guacamole_user_sync.postgresql import (
     PostgreSQLConnectionDetails,
 )
 from guacamole_user_sync.postgresql.orm import (
+    GuacamoleConnection,
+    GuacamoleConnectionPermission,
     GuacamoleEntity,
     GuacamoleEntityType,
+    GuacamoleObjectPermissionType,
     GuacamoleUser,
     GuacamoleUserGroup,
 )
@@ -185,6 +188,301 @@ class TestPostgreSQLBackend:
         assert len(filter_by_kwargs) == 1
         assert "type" in filter_by_kwargs
         assert filter_by_kwargs["type"] == GuacamoleEntityType.USER
+
+
+class TestPostgreSQLBackendWithRealSchema:
+    """Smoke-test PostgreSQLBackend against the real Guacamole schema.
+
+    Uses `postgresql_sqlite_backend_fixture` instead of a mocked session.
+    """
+
+    def test_add_all_then_query_round_trip(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+    ) -> None:
+        backend = postgresql_sqlite_backend_fixture
+        backend.add_all(
+            [
+                GuacamoleEntity(
+                    entity_id=1,
+                    name="aulus.agerius@rome.la",
+                    type=GuacamoleEntityType.USER,
+                ),
+            ],
+        )
+
+        results = backend.query(GuacamoleEntity, name="aulus.agerius@rome.la")
+
+        assert len(results) == 1
+        assert results[0].entity_id == 1
+        assert results[0].type == GuacamoleEntityType.USER
+
+    def test_ensure_connection_permissions_add_is_idempotent(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """Granting a permission that's already there must not fail or duplicate it."""
+        backend = postgresql_sqlite_backend_fixture
+        admin_group_entity = postgresql_model_guacamoleentity_admin_group_fixture[0]
+        backend.add_all([admin_group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+
+        admin_permissions = [
+            GuacamoleObjectPermissionType.READ,
+            GuacamoleObjectPermissionType.UPDATE,
+            GuacamoleObjectPermissionType.DELETE,
+            GuacamoleObjectPermissionType.ADMINISTER,
+        ]
+        for _ in range(2):
+            client.ensure_connection_permissions(
+                group_permissions={admin_group_entity.name: admin_permissions},
+            )
+
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=admin_group_entity.entity_id,
+        )
+        assert {permission.permission for permission in permissions} == set(
+            admin_permissions,
+        )
+
+    def test_ensure_connection_permissions_removes_manually_added_extras(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """A manually-added extra permission is removed on the next reconciliation."""
+        backend = postgresql_sqlite_backend_fixture
+        user_group_entity = postgresql_model_guacamoleentity_user_group_fixture[
+            2
+        ]  # plaintiffs
+        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
+        backend.add_all([user_group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+        group_permissions = {
+            user_group_entity.name: [GuacamoleObjectPermissionType.READ],
+        }
+        client.ensure_connection_permissions(group_permissions=group_permissions)
+
+        # Someone manually grants an extra permission outside this tool
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=user_group_entity.entity_id,
+                    connection_id=connection_id,
+                    permission=GuacamoleObjectPermissionType.UPDATE,
+                ),
+            ],
+        )
+
+        client.ensure_connection_permissions(group_permissions=group_permissions)
+
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=user_group_entity.entity_id,
+        )
+        assert len(permissions) == 1
+        assert permissions[0].connection_id == connection_id
+        assert permissions[0].permission == GuacamoleObjectPermissionType.READ
+
+    def test_ensure_connection_permissions_supports_many_groups(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleentity_admin_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """Every configured group is reconciled, not just the first two."""
+        backend = postgresql_sqlite_backend_fixture
+        defendants, everyone, plaintiffs = (
+            postgresql_model_guacamoleentity_user_group_fixture
+        )
+        auditors = postgresql_model_guacamoleentity_admin_group_fixture[0]
+        backend.add_all(
+            [defendants, everyone, plaintiffs, auditors],
+        )
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+
+        group_permissions = {
+            defendants.name: [
+                GuacamoleObjectPermissionType.READ,
+                GuacamoleObjectPermissionType.UPDATE,
+            ],
+            everyone.name: [GuacamoleObjectPermissionType.READ],
+            plaintiffs.name: [
+                GuacamoleObjectPermissionType.READ,
+                GuacamoleObjectPermissionType.DELETE,
+                GuacamoleObjectPermissionType.ADMINISTER,
+            ],
+            auditors.name: [GuacamoleObjectPermissionType.READ],
+        }
+        client.ensure_connection_permissions(group_permissions=group_permissions)
+
+        for entity, permissions in (
+            (defendants, group_permissions[defendants.name]),
+            (everyone, group_permissions[everyone.name]),
+            (plaintiffs, group_permissions[plaintiffs.name]),
+            (auditors, group_permissions[auditors.name]),
+        ):
+            granted = backend.query(
+                GuacamoleConnectionPermission,
+                entity_id=entity.entity_id,
+            )
+            assert {(grant.connection_id, grant.permission) for grant in granted} == {
+                (connection_id, permission) for permission in permissions
+            }
+
+    def test_ensure_connection_permissions_empty_list_grants_none(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """A group mapped to `[]` ends up with zero connection permission rows."""
+        backend = postgresql_sqlite_backend_fixture
+        group_entity = postgresql_model_guacamoleentity_user_group_fixture[2]
+        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
+        backend.add_all([group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=group_entity.entity_id,
+                    connection_id=connection_id,
+                    permission=GuacamoleObjectPermissionType.READ,
+                ),
+            ],
+        )
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+        client.ensure_connection_permissions(
+            group_permissions={group_entity.name: []},
+        )
+
+        assert (
+            backend.query(
+                GuacamoleConnectionPermission,
+                entity_id=group_entity.entity_id,
+            )
+            == []
+        )
+
+    def test_ensure_connection_permissions_revokes_removed_group(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """A group absent from the current call has its permissions revoked."""
+        backend = postgresql_sqlite_backend_fixture
+        group_entity = postgresql_model_guacamoleentity_user_group_fixture[2]
+        backend.add_all([group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+        client.ensure_connection_permissions(
+            group_permissions={group_entity.name: [GuacamoleObjectPermissionType.READ]},
+        )
+
+        # A later sync no longer configures this group at all.
+        client.ensure_connection_permissions(group_permissions={})
+
+        assert (
+            backend.query(
+                GuacamoleConnectionPermission,
+                entity_id=group_entity.entity_id,
+            )
+            == []
+        )
+
+    def test_ensure_connection_permissions_none_is_a_no_op(
+        self,
+        postgresql_sqlite_backend_fixture: PostgreSQLBackend,
+        postgresql_model_guacamoleentity_user_group_fixture: list[GuacamoleEntity],
+        postgresql_model_guacamoleconnection_fixture: list[GuacamoleConnection],
+    ) -> None:
+        """`group_permissions=None` (unset env var) must not touch anything.
+
+        Even a group that would otherwise look "stale" (holding permissions
+        but absent from an explicit mapping) must be left untouched.
+        """
+        backend = postgresql_sqlite_backend_fixture
+        group_entity = postgresql_model_guacamoleentity_user_group_fixture[2]
+        connection_id = postgresql_model_guacamoleconnection_fixture[0].connection_id
+        backend.add_all([group_entity])
+        backend.add_all(postgresql_model_guacamoleconnection_fixture)
+        backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=group_entity.entity_id,
+                    connection_id=connection_id,
+                    permission=GuacamoleObjectPermissionType.READ,
+                ),
+            ],
+        )
+
+        client = PostgreSQLClient(
+            database_name="database_name",
+            host_name="host_name",
+            port=1234,
+            user_name="user_name",
+            user_password="user_password",  # noqa: S106
+        )
+        client.backend = backend
+        client.ensure_connection_permissions(group_permissions=None)
+
+        permissions = backend.query(
+            GuacamoleConnectionPermission,
+            entity_id=group_entity.entity_id,
+        )
+        assert len(permissions) == 1
+        assert permissions[0].connection_id == connection_id
+        assert permissions[0].permission == GuacamoleObjectPermissionType.READ
 
 
 class TestPostgreSQLClient:
@@ -482,6 +780,10 @@ class TestPostgreSQLClient:
             client.update(
                 groups=ldap_model_groups_fixture,
                 users=ldap_model_users_fixture,
+                group_permissions={
+                    "admins": [GuacamoleObjectPermissionType.READ],
+                    "users": [GuacamoleObjectPermissionType.READ],
+                },
             )
             for output_line in (
                 "Ensuring that 3 group(s) are registered",
@@ -513,6 +815,10 @@ class TestPostgreSQLClient:
                 "Group 'plaintiffs' has 1 member(s).",
                 " ... group member 'aulus.agerius@rome.la' has entity_id 'None'",
                 "... creating 4 user/group assignments.",
+                "Could not find group 'admins': skipping its connection "
+                "permissions this cycle.",
+                "Could not find group 'users': skipping its connection "
+                "permissions this cycle.",
             ):
                 assert output_line in caplog.text
 

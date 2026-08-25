@@ -12,8 +12,11 @@ from guacamole_user_sync.models import (
 )
 
 from .orm import (
+    GuacamoleConnection,
+    GuacamoleConnectionPermission,
     GuacamoleEntity,
     GuacamoleEntityType,
+    GuacamoleObjectPermissionType,
     GuacamoleUser,
     GuacamoleUserGroup,
     GuacamoleUserGroupMember,
@@ -146,13 +149,122 @@ class PostgreSQLClient:
             msg = "Unable to ensure PostgreSQL schema."
             raise PostgreSQLError(msg) from exc
 
-    def update(self, *, groups: list[LDAPGroup], users: list[LDAPUser]) -> None:
+    def update(
+        self,
+        *,
+        groups: list[LDAPGroup],
+        users: list[LDAPUser],
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]] | None,
+    ) -> None:
         """Update the relevant tables to match lists of LDAP users and groups."""
         self.update_groups(groups)
         self.update_users(users)
         self.update_group_entities()
         self.update_user_entities(users)
         self.assign_users_to_groups(groups, users)
+        self.ensure_connection_permissions(group_permissions=group_permissions)
+
+    def ensure_connection_permissions(
+        self,
+        *,
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]] | None,
+    ) -> None:
+        """Grant each configured group its permissions on every connection.
+
+        Also revokes all connection permissions for any group that currently
+        holds some but is no longer present in `group_permissions` (e.g. it
+        was removed from `GUACAMOLE_GROUP_PERMISSIONS` since the last sync).
+
+        `group_permissions=None` means "not configured" and is a complete
+        no-op, so that leaving `GUACAMOLE_GROUP_PERMISSIONS` unset never
+        touches `guacamole_connection_permission` (backwards compatibility).
+        """
+        if group_permissions is None:
+            return
+        for group_name in self._groups_with_stale_permissions(group_permissions):
+            self._reconcile_group_connection_permissions(group_name, [])
+        for group_name, permissions in group_permissions.items():
+            self._reconcile_group_connection_permissions(group_name, permissions)
+
+    def _groups_with_stale_permissions(
+        self,
+        group_permissions: dict[str, list[GuacamoleObjectPermissionType]],
+    ) -> set[str]:
+        """Names of user groups holding connection permissions to revoke.
+
+        These are entities with at least one `guacamole_connection_permission`
+        row whose group name is absent from `group_permissions`.
+        """
+        entity_ids_with_permissions = {
+            grant.entity_id
+            for grant in self.backend.query(GuacamoleConnectionPermission)
+        }
+        return {
+            entity.name
+            for entity in self.backend.query(
+                GuacamoleEntity,
+                type=GuacamoleEntityType.USER_GROUP,
+            )
+            if entity.entity_id in entity_ids_with_permissions
+            and entity.name not in group_permissions
+        }
+
+    def _reconcile_group_connection_permissions(
+        self,
+        group_name: str,
+        permissions: list[GuacamoleObjectPermissionType],
+    ) -> None:
+        """Set the connection permissions for `group_name` to `permissions`."""
+        try:
+            entity_id = next(
+                entity.entity_id
+                for entity in self.backend.query(
+                    GuacamoleEntity,
+                    name=group_name,
+                    type=GuacamoleEntityType.USER_GROUP,
+                )
+            )
+        except StopIteration:
+            logger.warning(
+                "Could not find group '%s': skipping its connection "
+                "permissions this cycle.",
+                group_name,
+            )
+            return
+
+        connection_ids = [
+            connection.connection_id
+            for connection in self.backend.query(GuacamoleConnection)
+        ]
+        desired = {
+            (connection_id, permission)
+            for connection_id in connection_ids
+            for permission in permissions
+        }
+        current = {
+            (grant.connection_id, grant.permission)
+            for grant in self.backend.query(
+                GuacamoleConnectionPermission,
+                entity_id=entity_id,
+            )
+        }
+        self.backend.add_all(
+            [
+                GuacamoleConnectionPermission(
+                    entity_id=entity_id,
+                    connection_id=connection_id,
+                    permission=permission,
+                )
+                for connection_id, permission in desired - current
+            ],
+        )
+        for connection_id, permission in current - desired:
+            self.backend.delete(
+                GuacamoleConnectionPermission,
+                GuacamoleConnectionPermission.entity_id == entity_id,
+                GuacamoleConnectionPermission.connection_id == connection_id,
+                GuacamoleConnectionPermission.permission == permission,
+            )
 
     def update_groups(self, groups: list[LDAPGroup]) -> None:
         """Update the entities table with desired groups."""
