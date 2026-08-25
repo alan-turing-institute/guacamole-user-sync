@@ -6,9 +6,11 @@ from ldap3.abstract.entry import Entry
 from ldap3.core.exceptions import (
     LDAPBindError,
     LDAPException,
+    LDAPInvalidDnError,
     LDAPSessionTerminatedByServerError,
     LDAPSocketOpenError,
 )
+from ldap3.utils.dn import parse_dn
 
 from guacamole_user_sync.models import (
     LDAPError,
@@ -30,10 +32,12 @@ class LDAPClient:
         auto_bind: bool = True,
         bind_dn: str | None = None,
         bind_password: str | None = None,
+        group_member_attribute: str = "memberUid",
     ) -> None:
         self.auto_bind = auto_bind
         self.bind_dn = bind_dn
         self.bind_password = bind_password
+        self.group_member_attribute = group_member_attribute
         self.server = Server(hostname, get_info=ALL)
 
     @staticmethod
@@ -46,6 +50,22 @@ class LDAPClient:
             return [ldap_entry]
         msg = f"Unexpected input {ldap_entry} of type {type(ldap_entry)}"
         raise ValueError(msg)
+
+    @staticmethod
+    def member_uid(member: str) -> str:
+        """Return a UID from either a plain member value or a UID-based DN."""
+        if "=" not in member:
+            return member
+        try:
+            parsed_dn = cast(
+                list[tuple[str, str, str]],
+                parse_dn(member, escape=True, strip=True),
+            )
+        except LDAPInvalidDnError:
+            return member
+        if parsed_dn and parsed_dn[0][0].casefold() == "uid":
+            return parsed_dn[0][1]
+        return member
 
     def connect(self) -> Connection:
         logger.info("Initialising connection to LDAP host at %s", self.server.host)
@@ -72,10 +92,15 @@ class LDAPClient:
     def search_groups(self, query: LDAPQuery) -> list[LDAPGroup]:
         output = []
         for entry in self.search(query):
+            member_of_attr = getattr(entry, "memberOf", None)
+            member_attr = getattr(entry, self.group_member_attribute, None)
+            group_members = self.as_list(member_attr.value if member_attr else None)
             output.append(
                 LDAPGroup(
-                    member_of=self.as_list(entry.memberOf.value),
-                    member_uid=self.as_list(entry.memberUid.value),
+                    member_of=self.as_list(
+                        member_of_attr.value if member_of_attr else None,
+                    ),
+                    member_uid=[self.member_uid(member) for member in group_members],
                     name=getattr(entry, query.id_attr).value,
                 ),
             )
@@ -86,12 +111,17 @@ class LDAPClient:
     def search_users(self, query: LDAPQuery) -> list[LDAPUser]:
         output = []
         for entry in self.search(query):
+            display_name_attr = getattr(entry, "displayName", None)
+            member_of_attr = getattr(entry, "memberOf", None)
+            uid_attr = getattr(entry, "uid", None)
             output.append(
                 LDAPUser(
-                    display_name=entry.displayName.value,
-                    member_of=self.as_list(entry.memberOf.value),
+                    display_name=display_name_attr.value if display_name_attr else "",
+                    member_of=self.as_list(
+                        member_of_attr.value if member_of_attr else None,
+                    ),
                     name=getattr(entry, query.id_attr).value,
-                    uid=entry.uid.value,
+                    uid=uid_attr.value if uid_attr else "",
                 ),
             )
             logger.debug("Found LDAP user %s", output[-1])
