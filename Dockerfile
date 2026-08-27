@@ -44,7 +44,7 @@ RUN python -m pip wheel --no-cache-dir --wheel-dir /app/wheels pip && \
 RUN python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
     for WHEEL in /app/repairable/*.whl; do \
         echo "\nRepairing ${WHEEL}" && \
-        /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat "manylinux_2_34_$(uname -m)" "${WHEEL}"; \
+        /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat "manylinux_2_34_$(uname -m)" "${WHEEL}" || mv "${WHEEL}" /app/wheels/; \
     done && \
     rm -rf /app/repairable
 
