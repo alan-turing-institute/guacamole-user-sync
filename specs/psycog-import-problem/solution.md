@@ -151,52 +151,93 @@ So a build-time regression like this one (or a runtime regression like the
 resulting `ImportError`) is only ever discovered once it's already on `main`
 or already tagged and pushed to `ghcr.io` — exactly what happened here.
 
-Recommended CI changes:
+Recommended CI change: split the current single `publish_docker.yaml` into
+two separate workflows, one responsible for building and one responsible for
+publishing — rather than folding a build-check into the existing publish
+workflow. A dedicated build workflow can trigger on every PR and stand alone
+as a required check, independent of registry credentials or the
+publish-only trigger conditions; a transient `ghcr.io` login issue then
+never blocks PR feedback, and a build failure on a PR never risks being
+conflated with a publish failure on `main`.
 
-1. **Build the Docker image on every PR**, not just on push to `main`.
-   Add a `pull_request` trigger (mirroring `test_code.yaml`/
-   `lint_code.yaml`) to a Docker build workflow, using
-   `docker/build-push-action@v6` with `push: false` so it builds without
-   publishing:
+1. **`build_docker.yaml`** — verifies the image builds, on every PR (and on
+   push to `main`, as a sanity check before publish runs):
 
    ```yaml
+   name: Build Docker image
+
    on:
+     push:
+       branches: ["main"]
      pull_request:
+
    jobs:
      build_image:
+       name: Build Docker image (no push)
        runs-on: ubuntu-latest
        steps:
-         - uses: actions/checkout@v4
-         - uses: docker/build-push-action@v6
+         - name: Check out the repo
+           uses: actions/checkout@v4
+
+         - name: Build Docker image
+           uses: docker/build-push-action@v6
            with:
              push: false
-             load: true
-             tags: guacamole-user-sync:ci
    ```
 
    This alone would have caught the `auditwheel`/`patchelf` failure at PR
    time, once the `|| mv` fallback in fix (2) above is in place — the build
    itself now fails on the real error instead of completing silently.
 
-2. **Add a smoke test step after the build** that actually runs the image
-   and imports `psycopg`, so a *runtime* regression (like the original
-   silent fallback, before the build-time fix) is caught even if the build
-   itself succeeds:
+2. **`publish_docker.yaml`** — unchanged in scope (still only builds+pushes
+   on push to `main` and on version tags), but now exclusively concerned
+   with publishing; the build-verification responsibility moves entirely to
+   `build_docker.yaml`:
 
    ```yaml
-         - name: Smoke test the image
-           run: |
-             docker run --rm --entrypoint python guacamole-user-sync:ci \
-               -c "import psycopg"
+   name: Create and publish a Docker image
+
+   on:
+     push:
+       branches: ["main"]
+       tags: ["v*"]
+
+   env:
+     REGISTRY: ghcr.io
+     IMAGE_NAME: ${{ github.repository }}
+
+   jobs:
+     build-and-push-image:
+       name: Push Docker image to GitHub container repository
+       runs-on: ubuntu-latest
+       permissions:
+         packages: write
+         contents: read
+       steps:
+         - name: Check out the repo
+           uses: actions/checkout@v4
+
+         - name: Log in to the Container registry
+           uses: docker/login-action@v3
+           with:
+             registry: ghcr.io
+             username: ${{ github.actor }}
+             password: ${{ secrets.GITHUB_TOKEN }}
+
+         - name: Extract metadata (tags, labels) for Docker
+           id: meta
+           uses: docker/metadata-action@v5
+           with:
+             images: |
+               ghcr.io/${{ github.repository }}
+
+         - name: Build and push Docker images
+           uses: docker/build-push-action@v6
+           with:
+             push: true
+             tags: ${{ steps.meta.outputs.tags }}
+             labels: ${{ steps.meta.outputs.labels }}
    ```
 
-   This is cheap (no PostgreSQL/LDAP server needed) and would have caught
-   this exact bug directly, independent of whether the `auditwheel` failure
-   is made loud or not.
-
-3. Either fold these into `publish_docker.yaml` (build+smoke-test on PRs,
-   build+smoke-test+push on `main`/tags) or split into a separate
-   `build_docker.yaml` that runs on PRs only, with `publish_docker.yaml`
-   left as-is for the actual publish step. Splitting is preferable so a
-   transient registry/login issue in the publish job never blocks PR
-   feedback, and vice versa.
+   (This is the workflow's current content — no functional change, only
+   the addition of `build_docker.yaml` alongside it.)
