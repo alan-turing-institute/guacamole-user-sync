@@ -16,6 +16,16 @@ independently-sourced build tools**, so `auditwheel repair` never even gets
 to the point of evaluating policy compliance — it fails immediately on
 startup, for every wheel it's asked to repair.
 
+**Note:** removing the `|| mv` fallback above was a *local, diagnostic-only*
+step used to force `auditwheel`'s real error to the surface while
+investigating — it was not kept. Subsequent manual testing of the Docker
+build with the fallback removed surfaced a different, unrelated build
+failure for another wheel in `requirements.txt`, indicating the fallback is
+also relied on for a legitimate case (e.g. a wheel `auditwheel` correctly
+declines to repair because it has nothing to repair) and not solely masking
+this bug. The fix below therefore leaves the fallback in place; see
+"Fix" (2) below.
+
 ## Root cause
 
 The `builder` stage installs `auditwheel` and `patchelf` from two different
@@ -100,26 +110,31 @@ RUN apt-get update && \
 pipx-installed `patchelf` shadows any system one — no other Dockerfile
 changes are needed for `auditwheel` to find it.
 
-### 2. Keep Option A (fail loud) as a permanent safeguard, not just a diagnostic step
+### 2. Leave the `|| mv` fallback in place
 
-Even with (1) fixed, keep the `|| mv` fallback removed (or gated) so a
-*future* tool incompatibility fails the Docker build immediately instead of
-producing a container that only fails at runtime:
+Do **not** remove the `|| mv "${WHEEL}" /app/wheels/` fallback in the
+`auditwheel repair` loop. It was suspected of being purely a bug (silently
+masking the `patchelf` version conflict), but manual testing showed the
+build depends on it for at least one other wheel that `auditwheel`
+legitimately can't or doesn't need to repair — removing it breaks the build
+in a different way than the one being fixed here. The `Dockerfile`'s repair
+loop stays exactly as it currently is:
 
 ```dockerfile
 RUN python -m pip wheel --no-cache-dir --no-binary :all: --wheel-dir /app/repairable -r requirements.txt && \
     for WHEEL in /app/repairable/*.whl; do \
         echo "\nRepairing ${WHEEL}" && \
-        /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat "manylinux_2_34_$(uname -m)" "${WHEEL}"; \
+        /root/.local/bin/auditwheel repair --wheel-dir /app/wheels --plat "manylinux_2_34_$(uname -m)" "${WHEEL}" || mv "${WHEEL}" /app/wheels/; \
     done && \
     rm -rf /app/repairable
 ```
 
-If a *legitimate* manylinux-policy failure ever needs the fallback for some
-specific dependency (i.e. a wheel that genuinely can't be repaired and
-doesn't need to be, e.g. a pure-Python wheel `auditwheel` declines to touch),
-scope the fallback to that dependency by name rather than swallowing errors
-for the whole loop — don't reintroduce a blanket `|| mv`.
+Once `patchelf` is pinned to a compatible version (1, above), `auditwheel
+repair` succeeds for `psycopg_c` on its own merits — the fallback is no
+longer needed for *that* wheel — without having to touch or scope the
+fallback itself. If a future need arises to make failures in this loop
+loud again, that should be scoped per-dependency rather than applied as a
+blanket change, and treated as a separate decision from this fix.
 
 ### 3. Verify
 
@@ -134,7 +149,7 @@ This should succeed with no `libpq.so.5` error. Confirm the shipped wheel is
 now the repaired, `manylinux`-tagged one (diagnosis Step 2), and that
 `synchronise.py` still starts correctly against a real PostgreSQL instance.
 
-## Preventing a recurrence: catch this in CI, not in production
+## CI: out of scope for this fix
 
 The reason this shipped is that **nothing in CI ever builds or runs the
 Docker image**. Looking at the existing workflows:
@@ -149,95 +164,12 @@ Docker image**. Looking at the existing workflows:
 
 So a build-time regression like this one (or a runtime regression like the
 resulting `ImportError`) is only ever discovered once it's already on `main`
-or already tagged and pushed to `ghcr.io` — exactly what happened here.
+or already tagged and pushed to `ghcr.io` — exactly what happened here. That
+gap still exists after this fix.
 
-Recommended CI change: split the current single `publish_docker.yaml` into
-two separate workflows, one responsible for building and one responsible for
-publishing — rather than folding a build-check into the existing publish
-workflow. A dedicated build workflow can trigger on every PR and stand alone
-as a required check, independent of registry credentials or the
-publish-only trigger conditions; a transient `ghcr.io` login issue then
-never blocks PR feedback, and a build failure on a PR never risks being
-conflated with a publish failure on `main`.
-
-1. **`build_docker.yaml`** — verifies the image builds, on every PR (and on
-   push to `main`, as a sanity check before publish runs):
-
-   ```yaml
-   name: Build Docker image
-
-   on:
-     push:
-       branches: ["main"]
-     pull_request:
-
-   jobs:
-     build_image:
-       name: Build Docker image (no push)
-       runs-on: ubuntu-latest
-       steps:
-         - name: Check out the repo
-           uses: actions/checkout@v4
-
-         - name: Build Docker image
-           uses: docker/build-push-action@v6
-           with:
-             push: false
-   ```
-
-   This alone would have caught the `auditwheel`/`patchelf` failure at PR
-   time, once the `|| mv` fallback in fix (2) above is in place — the build
-   itself now fails on the real error instead of completing silently.
-
-2. **`publish_docker.yaml`** — unchanged in scope (still only builds+pushes
-   on push to `main` and on version tags), but now exclusively concerned
-   with publishing; the build-verification responsibility moves entirely to
-   `build_docker.yaml`:
-
-   ```yaml
-   name: Create and publish a Docker image
-
-   on:
-     push:
-       branches: ["main"]
-       tags: ["v*"]
-
-   env:
-     REGISTRY: ghcr.io
-     IMAGE_NAME: ${{ github.repository }}
-
-   jobs:
-     build-and-push-image:
-       name: Push Docker image to GitHub container repository
-       runs-on: ubuntu-latest
-       permissions:
-         packages: write
-         contents: read
-       steps:
-         - name: Check out the repo
-           uses: actions/checkout@v4
-
-         - name: Log in to the Container registry
-           uses: docker/login-action@v3
-           with:
-             registry: ghcr.io
-             username: ${{ github.actor }}
-             password: ${{ secrets.GITHUB_TOKEN }}
-
-         - name: Extract metadata (tags, labels) for Docker
-           id: meta
-           uses: docker/metadata-action@v5
-           with:
-             images: |
-               ghcr.io/${{ github.repository }}
-
-         - name: Build and push Docker images
-           uses: docker/build-push-action@v6
-           with:
-             push: true
-             tags: ${{ steps.meta.outputs.tags }}
-             labels: ${{ steps.meta.outputs.labels }}
-   ```
-
-   (This is the workflow's current content — no functional change, only
-   the addition of `build_docker.yaml` alongside it.)
+**This fix does not change any GitHub Actions workflow.** `publish_docker.yaml`
+is left exactly as it is, and no new build-verification workflow is added.
+Splitting build/publish into separate workflows, or otherwise gating PRs on
+a Docker build, is a reasonable idea for closing this gap, but it's a
+separate decision from fixing the `patchelf`/`auditwheel` conflict and is
+not part of this change.
