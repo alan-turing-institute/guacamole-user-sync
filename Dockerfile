@@ -18,15 +18,17 @@ RUN apt-get update && \
         g++ \
         gcc \
         libpq-dev \
-        patchelf \
         pipx \
         python3-dev \
         && \
     for EXECUTABLE in \
-        "auditwheel" \
-        "hatch"; \
+        "auditwheel==6.3.0" \
+        "hatch" \
+        "patchelf==0.17.2.2"; \
         do pipx install "$EXECUTABLE"; \
     done
+
+ENV PATH="/root/.local/bin:${PATH}"
 
 ## Use hatch to generate requirements file
 ## Note that we need to specify psycopg[c] in order to ensure that dependencies are included in the wheel
