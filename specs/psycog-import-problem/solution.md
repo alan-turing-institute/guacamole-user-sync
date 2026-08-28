@@ -149,6 +149,99 @@ This should succeed with no `libpq.so.5` error. Confirm the shipped wheel is
 now the repaired, `manylinux`-tagged one (diagnosis Step 2), and that
 `synchronise.py` still starts correctly against a real PostgreSQL instance.
 
+## Update: pinning `patchelf` via `pipx` was not sufficient
+
+Applying the fix above and rebuilding produced a *different* failure at the
+same `auditwheel repair` step, for every wheel in the loop:
+
+```
+ValueError: Cannot find required utility `patchelf` in PATH
+```
+
+This is not a version problem — `patchelf==0.17.2.2` did install
+successfully via `pipx`. It's a **`PATH` problem**: `pipx install` places
+its symlinked executables in `~/.local/bin` (`/root/.local/bin` for the
+`root` user the builder stage runs as), and prints its own warning to that
+effect during install:
+
+```
+⚠️  Note: '/root/.local/bin' is not on your PATH environment variable. ...
+    Run `pipx ensurepath` to automatically add it, or manually modify your
+    PATH in your shell's config file (i.e. ~/.bashrc).
+```
+
+That warning was already visible in the build log before this update, but
+went unnoticed because the Dockerfile invokes `auditwheel` and `hatch` by
+their **absolute path** (`/root/.local/bin/auditwheel`, `/root/.local/bin/hatch`),
+which sidesteps needing `/root/.local/bin` on `PATH` to *launch* those
+tools. `patchelf` is different: `auditwheel` doesn't get handed
+`patchelf`'s path directly — it shells out to a bare `patchelf` command
+and locates it itself via `shutil.which()` against the `PATH` environment
+variable of the `RUN` step. A Docker `RUN` layer has no shell profile
+(`~/.bashrc`, etc.) sourced, and `pipx ensurepath` only ever edits shell
+profile files, not the image's `ENV`, so nothing in the current Dockerfile
+ever adds `/root/.local/bin` to `PATH` — `patchelf` stays installed but
+unreachable by anything doing a `PATH` lookup, `auditwheel` included.
+
+Reproduced directly (`python:3.11.9-slim`, matching the builder base):
+
+```sh
+$ ls -la /root/.local/bin/
+lrwxrwxrwx 1 root root 49 auditwheel -> /root/.local/pipx/venvs/auditwheel/bin/auditwheel
+lrwxrwxrwx 1 root root 45 patchelf   -> /root/.local/pipx/venvs/patchelf/bin/patchelf
+$ echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin   # no /root/.local/bin
+$ /root/.local/bin/auditwheel repair --wheel-dir /tmp/repaired \
+      --plat manylinux_2_34_x86_64 psycopg_c-3.2.3-cp311-cp311-linux_x86_64.whl
+ValueError: Cannot find required utility `patchelf` in PATH
+```
+
+Re-running the same repair with `/root/.local/bin` prepended to `PATH`
+succeeds and produces the expected `manylinux`-retagged wheel — confirming
+`PATH` visibility, not the `patchelf` version, is the remaining blocker.
+
+### Updated fix
+
+Add `/root/.local/bin` to `PATH` for the rest of the `builder` stage,
+right after the `pipx install` loop, instead of relying on invoking each
+tool by absolute path:
+
+```dockerfile
+RUN apt-get update && \
+    apt-get install -y \
+        dumb-init \
+        g++ \
+        gcc \
+        libpq-dev \
+        pipx \
+        python3-dev \
+        && \
+    for EXECUTABLE in \
+        "auditwheel==6.3.0" \
+        "hatch" \
+        "patchelf==0.17.2.2"; \
+        do pipx install "$EXECUTABLE"; \
+    done
+
+ENV PATH="/root/.local/bin:${PATH}"
+```
+
+With `PATH` updated at the image-layer level (`ENV`, not a shell rc file),
+every subsequent `RUN` step in the `builder` stage inherits it — including
+the `auditwheel repair` subprocess's own internal `patchelf` lookup. The
+existing absolute-path invocations (`/root/.local/bin/hatch`,
+`/root/.local/bin/auditwheel`) can be simplified to just `hatch` and
+`auditwheel` once `PATH` covers them, but that simplification is cosmetic
+and not required for the fix — leaving them as absolute paths is harmless
+now that `PATH` also resolves them correctly.
+
+### Verify
+
+Same as "Verify" above (Step 3), plus confirming the build log no longer
+shows `ValueError: Cannot find required utility` for any wheel in the
+repair loop, and that `psycopg_c`'s shipped wheel is `manylinux`-tagged
+(diagnosis Step 2).
+
 ## CI: out of scope for this fix
 
 The reason this shipped is that **nothing in CI ever builds or runs the
