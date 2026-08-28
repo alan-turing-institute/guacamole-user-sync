@@ -28,6 +28,8 @@ RUN apt-get update && \
         do pipx install "$EXECUTABLE"; \
     done
 
+ENV PATH="/root/.local/bin:${PATH}"
+
 ## Use hatch to generate requirements file
 ## Note that we need to specify psycopg[c] in order to ensure that dependencies are included in the wheel
 COPY README.md pyproject.toml ./
