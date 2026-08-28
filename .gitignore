@@ -1,3 +1,5 @@
 .coverage
 requirements.txt
 **/__pycache__/
+CLAUDE.md
+specs/
