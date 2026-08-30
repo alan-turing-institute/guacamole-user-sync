@@ -71,12 +71,16 @@ def main(  # noqa: PLR0913
     postgresql_port: int,
     postgresql_user_name: str,
     repeat_interval: int,
-) -> None:
+    ldap_group_member_attr: str = "memberUid",
+    *,
+    single_run_mode: bool = False,
+) -> int:
     # Initialise LDAP resources
     ldap_client = LDAPClient(
         f"{ldap_host}:{ldap_port}",
         bind_dn=ldap_bind_dn,
         bind_password=ldap_bind_password,
+        group_member_attribute=ldap_group_member_attr,
     )
     ldap_group_query = LDAPQuery(
         base_dn=ldap_group_base_dn,
@@ -96,10 +100,9 @@ def main(  # noqa: PLR0913
         user_password=postgresql_password,
     )
 
-    # Loop until terminated
+    # Loop until terminated, or run once when requested
     while True:
-        # Run synchronisation step
-        synchronise(
+        success = synchronise(
             guacamole_group_permissions=guacamole_group_permissions,
             ldap_client=ldap_client,
             ldap_group_query=ldap_group_query,
@@ -107,7 +110,9 @@ def main(  # noqa: PLR0913
             postgresql_client=postgresql_client,
         )
 
-        # Wait before repeating
+        if single_run_mode:
+            return 0 if success else 1
+
         logger.info("Waiting %s seconds.", repeat_interval)
         time.sleep(repeat_interval)
 
@@ -119,14 +124,14 @@ def synchronise(
     ldap_group_query: LDAPQuery,
     ldap_user_query: LDAPQuery,
     postgresql_client: PostgreSQLClient,
-) -> None:
+) -> bool:
     logger.info("Starting synchronisation.")
     try:
         ldap_groups = ldap_client.search_groups(ldap_group_query)
         ldap_users = ldap_client.search_users(ldap_user_query)
     except LDAPError:
         logger.warning("LDAP server query failed")
-        return
+        return False
 
     try:
         postgresql_client.ensure_schema(SchemaVersion.v1_5_5)
@@ -137,7 +142,9 @@ def synchronise(
         )
     except PostgreSQLError:
         logger.warning("PostgreSQL update failed")
-        return
+        return False
+
+    return True
 
 
 if __name__ == "__main__":
@@ -185,22 +192,26 @@ if __name__ == "__main__":
         datefmt=r"%Y-%m-%d %H:%M:%S",
     )
 
-    main(
-        guacamole_group_permissions=guacamole_group_permissions,
-        ldap_bind_dn=os.getenv("LDAP_BIND_DN", None),
-        ldap_bind_password=os.getenv("LDAP_BIND_PASSWORD", None),
-        ldap_group_base_dn=ldap_group_base_dn,
-        ldap_group_filter=ldap_group_filter,
-        ldap_group_name_attr=os.getenv("LDAP_GROUP_NAME_ATTR", "cn"),
-        ldap_host=ldap_host,
-        ldap_port=int(os.getenv("LDAP_PORT", "389")),
-        ldap_user_base_dn=ldap_user_base_dn,
-        ldap_user_filter=ldap_user_filter,
-        ldap_user_name_attr=os.getenv("LDAP_USER_NAME_ATTR", "userPrincipalName"),
-        postgresql_database_name=os.getenv("POSTGRESQL_DB_NAME", "guacamole"),
-        postgresql_host_name=postgresql_host_name,
-        postgresql_password=postgresql_password,
-        postgresql_port=int(os.getenv("POSTGRESQL_PORT", "5432")),
-        postgresql_user_name=postgresql_user_name,
-        repeat_interval=int(os.getenv("REPEAT_INTERVAL", "300")),
+    raise SystemExit(
+        main(
+            guacamole_group_permissions=guacamole_group_permissions,
+            ldap_bind_dn=os.getenv("LDAP_BIND_DN", None),
+            ldap_bind_password=os.getenv("LDAP_BIND_PASSWORD", None),
+            ldap_group_base_dn=ldap_group_base_dn,
+            ldap_group_filter=ldap_group_filter,
+            ldap_group_name_attr=os.getenv("LDAP_GROUP_NAME_ATTR", "cn"),
+            ldap_group_member_attr=os.getenv("LDAP_GROUP_MEMBER_ATTR", "memberUid"),
+            ldap_host=ldap_host,
+            ldap_port=int(os.getenv("LDAP_PORT", "389")),
+            ldap_user_base_dn=ldap_user_base_dn,
+            ldap_user_filter=ldap_user_filter,
+            ldap_user_name_attr=os.getenv("LDAP_USER_NAME_ATTR", "userPrincipalName"),
+            postgresql_database_name=os.getenv("POSTGRESQL_DB_NAME", "guacamole"),
+            postgresql_host_name=postgresql_host_name,
+            postgresql_password=postgresql_password,
+            postgresql_port=int(os.getenv("POSTGRESQL_PORT", "5432")),
+            postgresql_user_name=postgresql_user_name,
+            repeat_interval=int(os.getenv("REPEAT_INTERVAL", "300")),
+            single_run_mode=os.getenv("SINGLE_RUN_MODE", "false").lower() == "true",
+        )
     )

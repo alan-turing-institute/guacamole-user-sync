@@ -22,11 +22,13 @@ class MockLDAPGroupEntry:
         cn: str,
         memberOf: list[str],  # noqa: N803
         memberUid: list[str],  # noqa: N803
+        member: list[str] | None = None,
     ) -> None:
         self.dn = MockLDAPAttribute(dn)
         self.cn = MockLDAPAttribute(cn)
         self.memberOf = MockLDAPAttribute(memberOf)
         self.memberUid = MockLDAPAttribute(memberUid)
+        self.member = MockLDAPAttribute([] if member is None else member)
 
 
 class MockLDAPUserEntry:
