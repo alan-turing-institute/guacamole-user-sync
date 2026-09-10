@@ -55,6 +55,7 @@ class LDAPClient:
                 user=self.bind_dn,
                 password=self.bind_password,
                 auto_bind=self.auto_bind,
+                raise_exceptions=True,
             )
         except LDAPSocketOpenError as exc:
             msg = "Server could not be reached."
