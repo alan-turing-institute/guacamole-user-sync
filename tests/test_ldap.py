@@ -18,6 +18,7 @@ from guacamole_user_sync.models import (
 )
 
 from .mocks import (
+    MockLDAPAttribute,
     MockLDAPConnection,
     MockLDAPGroupEntry,
     MockLDAPServer,
@@ -32,6 +33,7 @@ class TestLDAPClient:
         client = LDAPClient("ldap://test-host")
         assert isinstance(client.server, Server)
         assert client.server.host == "test-host"
+        assert client.group_member_attribute == "memberUid"
 
     def test_connect_invalid_server(self) -> None:
         client = LDAPClient("test-host")
@@ -103,6 +105,24 @@ class TestLDAPClient:
         ):
             LDAPClient.as_list(test_input)  # type: ignore[arg-type]
 
+    @pytest.mark.parametrize(
+        ("member", "expected"),
+        [
+            ("aulus.agerius", "aulus.agerius"),
+            (
+                "uid=aulus.agerius,cn=users,cn=accounts,dc=rome,dc=la",
+                "aulus.agerius",
+            ),
+            (
+                "cn=Aulus Agerius,ou=users,dc=rome,dc=la",
+                "cn=Aulus Agerius,ou=users,dc=rome,dc=la",
+            ),
+            ("=invalid", "=invalid"),
+        ],
+    )
+    def test_member_uid(self, member: str, expected: str) -> None:
+        assert LDAPClient.member_uid(member) == expected
+
     def test_search_session_terminated(self) -> None:
         with mock.patch(
             "guacamole_user_sync.ldap.ldap_client.Connection.search",
@@ -169,6 +189,54 @@ class TestLDAPClient:
         assert "Server returned 3 results." in caplog.text
         assert "Loaded 3 LDAP groups" in caplog.text
 
+    def test_search_groups_custom_member_attribute(
+        self,
+        ldap_query_groups_fixture: LDAPQuery,
+        ldap_response_groups_fixture: list[MockLDAPGroupEntry],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        entry = ldap_response_groups_fixture[0]
+        entry.member = MockLDAPAttribute(
+            ["uid=aulus.agerius,cn=users,cn=accounts,dc=rome,dc=la"],
+        )
+        monkeypatch.setattr(
+            LDAPClient,
+            "connect",
+            lambda _: MockLDAPConnection(server=MockLDAPServer([entry])),
+        )
+        client = LDAPClient(
+            hostname="test-host",
+            auto_bind=False,
+            group_member_attribute="member",
+        )
+        groups = client.search_groups(query=ldap_query_groups_fixture)
+        assert groups[0].member_uid == ["aulus.agerius"]
+
+    def test_search_groups_handles_missing_optional_attributes(
+        self,
+        ldap_query_groups_fixture: LDAPQuery,
+        ldap_response_groups_fixture: list[MockLDAPGroupEntry],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        entry = ldap_response_groups_fixture[0]
+        del entry.memberOf
+        del entry.member
+        monkeypatch.setattr(
+            LDAPClient,
+            "connect",
+            lambda _: MockLDAPConnection(server=MockLDAPServer([entry])),
+        )
+        client = LDAPClient(
+            hostname="test-host",
+            auto_bind=False,
+            group_member_attribute="member",
+        )
+
+        groups = client.search_groups(query=ldap_query_groups_fixture)
+
+        assert groups[0].member_of == []
+        assert groups[0].member_uid == []
+
     def test_search_users(
         self,
         caplog: pytest.LogCaptureFixture,
@@ -192,3 +260,26 @@ class TestLDAPClient:
         assert "base DN: OU=users,DC=rome,DC=la" in caplog.text
         assert "Server returned 2 results." in caplog.text
         assert "Loaded 2 LDAP users" in caplog.text
+
+    def test_search_users_handles_missing_optional_attributes(
+        self,
+        ldap_query_users_fixture: LDAPQuery,
+        ldap_response_users_fixture: list[MockLDAPUserEntry],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        entry = ldap_response_users_fixture[0]
+        del entry.displayName
+        del entry.memberOf
+        del entry.uid
+        monkeypatch.setattr(
+            LDAPClient,
+            "connect",
+            lambda _: MockLDAPConnection(server=MockLDAPServer([entry])),
+        )
+        client = LDAPClient(hostname="test-host", auto_bind=False)
+
+        users = client.search_users(query=ldap_query_users_fixture)
+
+        assert users[0].display_name == ""
+        assert users[0].member_of == []
+        assert users[0].uid == ""
