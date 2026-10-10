@@ -3,6 +3,8 @@ import logging
 import os
 import time
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from guacamole_user_sync.ldap import LDAPClient
 from guacamole_user_sync.models import LDAPError, LDAPQuery, PostgreSQLError
 from guacamole_user_sync.postgresql import (
@@ -135,8 +137,8 @@ def synchronise(
             users=ldap_users,
             group_permissions=guacamole_group_permissions,
         )
-    except PostgreSQLError:
-        logger.warning("PostgreSQL update failed")
+    except (PostgreSQLError, SQLAlchemyError):
+        logger.exception("PostgreSQL update failed; retrying at the next interval.")
         return
 
 

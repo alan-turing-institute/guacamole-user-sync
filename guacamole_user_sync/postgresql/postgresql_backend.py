@@ -47,7 +47,12 @@ class PostgreSQLBackend:
                 port=self.connection_details.port,
                 database=self.connection_details.database_name,
             )
-            self._engine = create_engine(url_object, echo=False)
+            self._engine = create_engine(
+                url_object,
+                echo=False,
+                pool_pre_ping=True,
+                connect_args={"connect_timeout": 30},
+            )
         return self._engine
 
     def session(self, *, expire_on_commit: bool = True) -> Session:
